@@ -58,7 +58,11 @@ CREATE TABLE IF NOT EXISTS events (
 
 def connect(db_path: str | Path) -> sqlite3.Connection:
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
+    # check_same_thread=False: each call opens its own connection, used for exactly
+    # one request/CLI invocation and then closed — never shared — but FastAPI can
+    # run a sync dependency and its endpoint on different threadpool threads, which
+    # sqlite3's default same-thread check would otherwise reject.
+    conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
