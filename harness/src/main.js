@@ -86,6 +86,7 @@ async function loadPublication() {
 let paragraphs = [];
 let activeIndex = -1;
 let navigatorInstance = null;
+let navigating = false;
 
 async function loadParagraphs(bookId) {
   setStatus(`Loading paragraphs for ${bookId}...`);
@@ -125,6 +126,15 @@ async function goToParagraph(index) {
   const p = paragraphs[index];
   if (!p || !navigatorInstance) return;
 
+  // EpubNavigator.go() immediately calls back with `false` if a previous
+  // .go() is still resolving (its own internal `_isNavigating` guard) —
+  // unrelated to handleLocator/cssSelector resolution. Without this guard,
+  // a fast double-click (or Prev/Next spammed) fires two overlapping .go()
+  // calls: the second bounces off that guard and reports a bogus failure,
+  // while the first's callback lands moments later reporting real success —
+  // a confusing red-then-green flicker for what was actually one navigation.
+  if (navigating) return;
+
   locatorJsonEl.textContent = JSON.stringify(p.locator, null, 2);
 
   const locator = Locator.deserialize(p.locator);
@@ -133,12 +143,14 @@ async function goToParagraph(index) {
     return;
   }
 
+  navigating = true;
   setStatus(`Navigating to ${p.paragraphId}...`);
   navigatorInstance.go(locator, true, (ok) => {
+    navigating = false;
     activeIndex = index;
     updateActiveHighlight();
     updateNavButtons();
-    setStatus(ok ? `Resolved ${p.paragraphId} in-page.` : `${p.paragraphId}: fell back (see console for handleLocator warning).`, ok ? "ok" : "error");
+    setStatus(ok ? `Resolved ${p.paragraphId} in-page.` : `${p.paragraphId}: href not found in the publication's readingOrder (see console for the handleLocator warning).`, ok ? "ok" : "error");
   });
 }
 
