@@ -34,7 +34,10 @@ logging.basicConfig(level=logging.INFO)
 
 DATA_ROOT = Path(os.environ.get("BOOKSPINE_DATA", "./data"))
 DB_PATH = DATA_ROOT / "bookspine.db"
-STORAGE_ROOT = DATA_ROOT / "storage"
+# Same flat layout `bookspine extract -o <dir>` uses (db + publications/ + blobs/
+# directly under one root) — so BOOKSPINE_DATA=<dir> and `-o <dir>` are
+# interchangeable: point the API at whatever directory the CLI already wrote to.
+STORAGE_ROOT = DATA_ROOT
 VALID_STRATEGIES = ("id", "selector", "auto")
 
 app = FastAPI(title="BookSpine", version="0.1.0")

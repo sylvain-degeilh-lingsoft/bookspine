@@ -99,18 +99,19 @@ that the two addressing strategies coexist and are independently selectable.
 ## Data persistence (mirrors the Blueprint's §05 subsection)
 
 ```
-{BOOKSPINE_DATA}/
+{BOOKSPINE_DATA}/                 (same layout under whatever dir `-o` points the CLI at)
   bookspine.db                    SQLite: publications, paragraphs (resolver index),
                                    paragraphs_prev (previous text, kept across reprocess),
                                    events (append-only, monotonic cursor)
-  storage/
-    publications/{bookId}/
-      record.json
-      structure.json
-      paragraphs.jsonl
-    blobs/{sha256}.epub            canonical EPUB, content-addressed by canonicalHash —
+  publications/{bookId}/
+    record.json
+    structure.json
+    paragraphs.jsonl
+  blobs/{sha256}.epub              canonical EPUB, content-addressed by canonicalHash —
                                     identical output from two reprocesses shares one file
 ```
+
+The CLI (`bookspine extract -o <dir>`) and the API (`BOOKSPINE_DATA=<dir> bookspine serve`) use this exact same layout, so pointing both at the same directory means the API immediately sees whatever the CLI already extracted, and vice versa — `bookspine extract` is really just a one-shot, no-server way to drive the same pipeline the API drives per-request.
 
 `paragraphs` is indexed by `paragraph_id` (primary key), so `/resolve` is a lookup,
 not a JSONL scan. Reprocessing a book archives its *previous* paragraph text into
