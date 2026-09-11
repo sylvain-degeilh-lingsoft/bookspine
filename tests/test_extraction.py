@@ -1,4 +1,7 @@
+import pytest
+
 from bookspine.extract import pipeline
+from bookspine.extract.epub_reader import EpubFormatError
 
 EXPECTED_TEXTS = {
     "First paragraph of the chapter.",
@@ -11,6 +14,11 @@ EXPECTED_TEXTS = {
 def test_book_id_minted_from_isbn_identifier(sample_epub):
     result = pipeline.extract(sample_epub, strategy="selector")
     assert result.record.book_id == "b_9781234567890"
+
+
+def test_missing_identifier_is_rejected(epub_with_no_identifier):
+    with pytest.raises(EpubFormatError):
+        pipeline.extract(epub_with_no_identifier, strategy="selector")
 
 
 def test_finds_exactly_one_leaf_per_li_p_pair_not_two(sample_epub):

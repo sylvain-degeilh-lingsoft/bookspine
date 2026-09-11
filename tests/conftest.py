@@ -32,6 +32,24 @@ PACKAGE_OPF = b"""<?xml version="1.0"?>
   </spine>
 </package>"""
 
+NO_IDENTIFIER_PACKAGE_OPF = b"""<?xml version="1.0"?>
+<package xmlns="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/"
+         version="3.0" unique-identifier="pub-id">
+  <metadata>
+    <dc:identifier id="pub-id"></dc:identifier>
+    <dc:title>Test Book</dc:title>
+    <dc:language>en</dc:language>
+  </metadata>
+  <manifest>
+    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+    <item id="ch01" href="ch01.xhtml" media-type="application/xhtml+xml"/>
+  </manifest>
+  <spine>
+    <itemref idref="nav" linear="no"/>
+    <itemref idref="ch01"/>
+  </spine>
+</package>"""
+
 NAV_XHTML = b"""<?xml version="1.0"?>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
 <head><title>nav</title></head>
@@ -58,14 +76,14 @@ CH01_XHTML = b"""<?xml version="1.0"?>
 </html>"""
 
 
-def build_epub_bytes() -> bytes:
+def build_epub_bytes(package_opf: bytes = PACKAGE_OPF) -> bytes:
     # Fixed date_time on every entry: zipfile.writestr(name, data) otherwise stamps
     # each entry with the current wall-clock time, so two calls to this function a
     # second apart would produce different bytes for byte-identical content.
     entries = {
         "mimetype": "application/epub+zip",
         "META-INF/container.xml": CONTAINER_XML,
-        "EPUB/package.opf": PACKAGE_OPF,
+        "EPUB/package.opf": package_opf,
         "EPUB/nav.xhtml": NAV_XHTML,
         "EPUB/ch01.xhtml": CH01_XHTML,
     }
@@ -82,4 +100,11 @@ def build_epub_bytes() -> bytes:
 def sample_epub(tmp_path):
     path = tmp_path / "sample.epub"
     path.write_bytes(build_epub_bytes())
+    return str(path)
+
+
+@pytest.fixture
+def epub_with_no_identifier(tmp_path):
+    path = tmp_path / "no-identifier.epub"
+    path.write_bytes(build_epub_bytes(package_opf=NO_IDENTIFIER_PACKAGE_OPF))
     return str(path)

@@ -8,12 +8,11 @@ import re
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from hashlib import sha256
 
 from lxml import etree
 
 from bookspine.extract import guided_nav
-from bookspine.extract.epub_reader import read_package, read_resource
+from bookspine.extract.epub_reader import EpubFormatError, read_package, read_resource
 from bookspine.extract.hashing import sha256_hex
 from bookspine.extract.paragraph_walker import LeafRef, build_document_tree, localname
 from bookspine.extract.repackage import build_canonical_epub
@@ -44,14 +43,18 @@ class ExtractionResult:
     canonical_epub: bytes
 
 
-def mint_book_id(identifier: str, title: str) -> str:
-    if identifier:
-        tail = identifier.rsplit(":", 1)[-1]
-        slug = re.sub(r"[^a-zA-Z0-9]+", "", tail)
-        if slug:
-            return f"b_{slug}"
-    basis = f"{identifier}|{title}".encode("utf-8")
-    return "b_" + sha256(basis).hexdigest()[:16]
+def mint_book_id(identifier: str) -> str:
+    """bookId must be stable across reprocessing the same book, which only a real
+    dc:identifier can guarantee — there's no content-derived substitute BookSpine
+    could fabricate that wouldn't risk colliding two unrelated, identifierless
+    books. So an unusable identifier is rejected outright rather than papered over."""
+    if not identifier:
+        raise EpubFormatError("EPUB has no dc:identifier — cannot mint a stable bookId")
+    tail = identifier.rsplit(":", 1)[-1]
+    slug = re.sub(r"[^a-zA-Z0-9]+", "", tail)
+    if not slug:
+        raise EpubFormatError(f"dc:identifier {identifier!r} has no usable characters for a bookId")
+    return f"b_{slug}"
 
 
 def _tail_words(text: str, n: int) -> str:
@@ -70,7 +73,7 @@ def extract(epub_path: str, strategy: str = "auto") -> ExtractionResult:
     source_hash = sha256_hex(source_bytes)
 
     pkg = read_package(epub_path)
-    book_id = mint_book_id(pkg.identifier, pkg.title)
+    book_id = mint_book_id(pkg.identifier)
 
     content_items = [item for item in pkg.spine if item.linear and not item.is_nav]
 

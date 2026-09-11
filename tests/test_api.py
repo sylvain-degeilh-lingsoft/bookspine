@@ -73,6 +73,11 @@ def test_events_by_timestamp(client, sample_epub):
     assert client.get("/v1/events", params={"sinceTime": "not-a-date"}).status_code == 400
 
 
+def test_upload_without_identifier_is_rejected(client, epub_with_no_identifier):
+    resp = _upload(client, epub_with_no_identifier)
+    assert resp.status_code == 422
+
+
 def test_reupload_is_idempotent(client, sample_epub):
     first = _upload(client, sample_epub)
     assert first.status_code == 201

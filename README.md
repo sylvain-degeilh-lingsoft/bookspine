@@ -150,3 +150,12 @@ well-formed markup, resolvable relative hrefs. The paragraph walker treats
 `p`, `li`, `td`, `th`, `dd`, `blockquote`, `figcaption`, `div`, `dt`, and `caption`
 as text-bearing — not just `<p>` — and always takes the *innermost* qualifying
 element on a given path (so `<li><p>...</p></li>` yields one paragraph, not two).
+
+**A usable `dc:identifier` is required.** `bookId` is minted from it (any scheme —
+ISBN, UUID, DOI, ...), because `bookId` must stay stable across reprocessing the
+same book, and only a real identifier can guarantee that. There's no
+content-derived substitute BookSpine could fabricate without risking two
+unrelated, identifierless books colliding on the same `bookId`. A file with no
+`dc:identifier`, or one that reduces to nothing after stripping non-alphanumeric
+characters, is rejected outright (`422` from the API, a clean CLI error) rather
+than silently guessed at.

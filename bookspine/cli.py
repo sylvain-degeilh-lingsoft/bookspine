@@ -6,6 +6,7 @@ from pathlib import Path
 import click
 
 from bookspine import service
+from bookspine.extract.epub_reader import EpubFormatError
 from bookspine.storage import db as db_module
 
 
@@ -36,6 +37,8 @@ def extract(epub_path: str, strategy: str, out_dir: str, db_path: str | None) ->
     conn = db_module.connect(db_path)
     try:
         record, unchanged = service.process_epub(conn, out_dir, epub_path, strategy)
+    except EpubFormatError as exc:
+        raise click.ClickException(str(exc)) from exc
     finally:
         conn.close()
 
