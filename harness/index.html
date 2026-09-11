@@ -20,7 +20,7 @@
     }
     #sidebar h1 { font-size: 15px; margin: 0 0 4px; }
     #sidebar label { font-size: 12px; opacity: 0.75; display: block; margin-bottom: 2px; }
-    #sidebar input { width: 100%; box-sizing: border-box; padding: 5px 6px; font-size: 13px; }
+    #sidebar input, #sidebar select { width: 100%; box-sizing: border-box; padding: 5px 6px; font-size: 13px; }
     #sidebar button { padding: 6px 10px; font-size: 13px; cursor: pointer; }
     #status { font-size: 12px; white-space: pre-wrap; min-height: 1.2em; }
     #status.error { color: #d33; }
@@ -71,8 +71,8 @@
     <h1>BookSpine Locator Harness</h1>
 
     <div>
-      <label for="book-id">BookSpine bookId</label>
-      <input id="book-id" placeholder="b_9781449328030" />
+      <label for="book-select">Book</label>
+      <select id="book-select" disabled><option>Loading books…</option></select>
     </div>
     <button id="load-btn">Load paragraphs from BookSpine</button>
     <div id="status"></div>

@@ -1,17 +1,8 @@
 import { defineConfig } from "vite";
 
-// Proxies /api/* to a locally running `bookspine serve` so the harness page
-// never has to deal with cross-origin fetches (or BookSpine needing CORS
-// headers at all) — it's a same-origin request from the browser's point of
-// view, just like Thorium Web's own publication-server setup.
-export default defineConfig({
-  server: {
-    proxy: {
-      "/api": {
-        target: "http://localhost:8080",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
-      },
-    },
-  },
-});
+// No BookSpine proxy: it used to route /api/* to a locally running
+// `bookspine serve`, but Vite's dev proxy hangs for tens of seconds on
+// multi-MB responses (this harness's own paragraph lists can get that big) —
+// a bug in the proxy itself, not in BookSpine. main.js now calls BookSpine
+// directly, which works because its API sends permissive CORS headers.
+export default defineConfig({});

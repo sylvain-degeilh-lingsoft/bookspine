@@ -39,8 +39,12 @@ accepts an integer position number, not an href/selector/text Locator).
    ```
 
 3. Make sure `bookspine serve` is running on port 8080 against the storage
-   directory where you extracted that same book — the harness proxies
-   `/api/*` to it.
+   directory where you extracted that same book — the harness calls it
+   directly (`http://localhost:8080`), relying on the CORS headers the API
+   sends. (An earlier version proxied `/api/*` through Vite instead; that
+   proxy hung for tens of seconds on multi-MB responses — this book's own
+   full paragraph list is a few MB — so it was dropped once BookSpine grew
+   CORS support for the Thorium Web panel anyway.)
 
 4. Start the harness:
 
@@ -52,8 +56,15 @@ accepts an integer position number, not an href/selector/text Locator).
 
 ## Using it
 
-1. Paste the book's `bookId` (e.g. `b_9781449328030`) and click **Load
-   paragraphs from BookSpine**.
+1. The **Book** dropdown lists every book BookSpine knows about (`GET
+   /v1/publications`), by title — it defaults to whichever book is actually
+   loaded (recovered from the page's own `?book=` URL param, or by matching
+   identifiers when there isn't one yet). Picking a different book navigates
+   to `?book={bookId}`, which loads *that* book's own manifest — the dropdown
+   used to only change which bookId the paragraph list queried, leaving the
+   rendered EPUB unchanged, so the two could silently point at different
+   books. Click **Load paragraphs from BookSpine** once the right book is
+   showing.
 2. Click any paragraph in the sidebar list — the reader on the right should
    jump straight to it via `EpubNavigator.go(locator, ...)`, the exact call
    Thorium Web's own navigation goes through.
