@@ -1,5 +1,7 @@
 # BookSpine (prototype)
 
+[![View on GitHub](https://img.shields.io/badge/GitHub-sylvain--degeilh--lingsoft%2Fbookspine-181717?logo=github)](https://github.com/sylvain-degeilh-lingsoft/bookspine)
+
 A working prototype of **BookSpine**, the paragraph-level EPUB structure/Locator
 processor sketched in the Reading Assistant Blueprint (§05, with §07's
 id-injection-vs-CSS-selector rules and the data-persistence design applied as
