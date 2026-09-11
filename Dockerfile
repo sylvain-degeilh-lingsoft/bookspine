@@ -18,7 +18,7 @@ COPY pyproject.toml README.md ./
 COPY bookspine ./bookspine
 RUN pip install --no-cache-dir .
 
-RUN useradd --create-home --uid 1000 bookspine \
+RUN useradd --create-home bookspine \
     && mkdir -p /data \
     && chown -R bookspine:bookspine /data /app
 USER bookspine
