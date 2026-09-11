@@ -59,13 +59,22 @@ CH01_XHTML = b"""<?xml version="1.0"?>
 
 
 def build_epub_bytes() -> bytes:
+    # Fixed date_time on every entry: zipfile.writestr(name, data) otherwise stamps
+    # each entry with the current wall-clock time, so two calls to this function a
+    # second apart would produce different bytes for byte-identical content.
+    entries = {
+        "mimetype": "application/epub+zip",
+        "META-INF/container.xml": CONTAINER_XML,
+        "EPUB/package.opf": PACKAGE_OPF,
+        "EPUB/nav.xhtml": NAV_XHTML,
+        "EPUB/ch01.xhtml": CH01_XHTML,
+    }
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
-        zf.writestr("mimetype", "application/epub+zip", zipfile.ZIP_STORED)
-        zf.writestr("META-INF/container.xml", CONTAINER_XML)
-        zf.writestr("EPUB/package.opf", PACKAGE_OPF)
-        zf.writestr("EPUB/nav.xhtml", NAV_XHTML)
-        zf.writestr("EPUB/ch01.xhtml", CH01_XHTML)
+        for name, data in entries.items():
+            info = zipfile.ZipInfo(name, date_time=(2000, 1, 1, 0, 0, 0))
+            compress_type = zipfile.ZIP_STORED if name == "mimetype" else zipfile.ZIP_DEFLATED
+            zf.writestr(info, data, compress_type=compress_type)
     return buf.getvalue()
 
 
