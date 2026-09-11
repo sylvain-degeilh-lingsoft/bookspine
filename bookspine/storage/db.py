@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS publications (
     strategy       TEXT NOT NULL,
     source_hash    TEXT NOT NULL,
     canonical_hash TEXT NOT NULL,
-    processed_at   TEXT NOT NULL
+    processed_at   TEXT NOT NULL,
+    granularity    TEXT NOT NULL DEFAULT 'paragraph'
 );
 
 CREATE TABLE IF NOT EXISTS paragraphs (
@@ -67,7 +68,19 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Lightweight forward-only migration for a prototype with no migration
+    framework: add columns introduced after a db file was first created. Existing
+    rows predate the `granularity` option, so they were paragraph-level — the
+    column default already says so."""
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(publications)")}
+    if "granularity" not in columns:
+        conn.execute("ALTER TABLE publications ADD COLUMN granularity TEXT NOT NULL DEFAULT 'paragraph'")
+        conn.commit()
 
 
 def _now() -> str:
@@ -78,12 +91,13 @@ def upsert_publication(conn: sqlite3.Connection, record: PublicationRecord) -> N
     conn.execute(
         """
         INSERT INTO publications
-            (book_id, title, identifier, format, status, strategy, source_hash, canonical_hash, processed_at)
-        VALUES (:book_id, :title, :identifier, :format, :status, :strategy, :source_hash, :canonical_hash, :processed_at)
+            (book_id, title, identifier, format, status, strategy, source_hash, canonical_hash, processed_at, granularity)
+        VALUES (:book_id, :title, :identifier, :format, :status, :strategy, :source_hash, :canonical_hash, :processed_at, :granularity)
         ON CONFLICT(book_id) DO UPDATE SET
             title=excluded.title, identifier=excluded.identifier, format=excluded.format,
             status=excluded.status, strategy=excluded.strategy, source_hash=excluded.source_hash,
-            canonical_hash=excluded.canonical_hash, processed_at=excluded.processed_at
+            canonical_hash=excluded.canonical_hash, processed_at=excluded.processed_at,
+            granularity=excluded.granularity
         """,
         record.__dict__,
     )
@@ -101,6 +115,7 @@ def get_publication(conn: sqlite3.Connection, book_id: str) -> dict | None:
         "format": row["format"],
         "status": row["status"],
         "strategy": row["strategy"],
+        "granularity": row["granularity"],
         "sourceHash": row["source_hash"],
         "canonicalHash": row["canonical_hash"],
         "processedAt": row["processed_at"],

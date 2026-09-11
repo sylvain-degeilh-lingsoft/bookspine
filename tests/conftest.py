@@ -76,7 +76,13 @@ CH01_XHTML = b"""<?xml version="1.0"?>
 </html>"""
 
 
-def build_epub_bytes(package_opf: bytes = PACKAGE_OPF) -> bytes:
+MULTI_SENTENCE_CH01_XHTML = CH01_XHTML.replace(
+    b"First paragraph of the chapter.",
+    b"First sentence of the chapter. Dr. Smith wrote the second. A third follows.",
+)
+
+
+def build_epub_bytes(package_opf: bytes = PACKAGE_OPF, ch01_xhtml: bytes = CH01_XHTML) -> bytes:
     # Fixed date_time on every entry: zipfile.writestr(name, data) otherwise stamps
     # each entry with the current wall-clock time, so two calls to this function a
     # second apart would produce different bytes for byte-identical content.
@@ -85,7 +91,7 @@ def build_epub_bytes(package_opf: bytes = PACKAGE_OPF) -> bytes:
         "META-INF/container.xml": CONTAINER_XML,
         "EPUB/package.opf": package_opf,
         "EPUB/nav.xhtml": NAV_XHTML,
-        "EPUB/ch01.xhtml": CH01_XHTML,
+        "EPUB/ch01.xhtml": ch01_xhtml,
     }
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
@@ -107,4 +113,11 @@ def sample_epub(tmp_path):
 def epub_with_no_identifier(tmp_path):
     path = tmp_path / "no-identifier.epub"
     path.write_bytes(build_epub_bytes(package_opf=NO_IDENTIFIER_PACKAGE_OPF))
+    return str(path)
+
+
+@pytest.fixture
+def multi_sentence_epub(tmp_path):
+    path = tmp_path / "multi-sentence.epub"
+    path.write_bytes(build_epub_bytes(ch01_xhtml=MULTI_SENTENCE_CH01_XHTML))
     return str(path)

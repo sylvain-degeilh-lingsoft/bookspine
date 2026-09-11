@@ -41,6 +41,7 @@ DB_PATH = DATA_ROOT / "bookspine.db"
 # interchangeable: point the API at whatever directory the CLI already wrote to.
 STORAGE_ROOT = DATA_ROOT
 VALID_STRATEGIES = ("id", "selector", "auto")
+VALID_GRANULARITIES = ("paragraph", "sentence")
 
 app = FastAPI(title="BookSpine", version="0.1.0")
 
@@ -61,9 +62,11 @@ def _save_upload(data: bytes) -> Path:
     return path
 
 
-def _run_pipeline(conn, epub_path: Path, strategy: str, notify_url: str | None) -> tuple[dict, bool]:
+def _run_pipeline(
+    conn, epub_path: Path, strategy: str, notify_url: str | None, granularity: str
+) -> tuple[dict, bool]:
     try:
-        return service.process_epub(conn, str(STORAGE_ROOT), str(epub_path), strategy, notify_url)
+        return service.process_epub(conn, str(STORAGE_ROOT), str(epub_path), strategy, notify_url, granularity)
     except (EpubFormatError, XMLSyntaxError) as exc:
         raise HTTPException(422, f"could not process EPUB: {exc}") from exc
     finally:
@@ -79,13 +82,16 @@ def healthz():
 async def create_publication(
     file: UploadFile = File(...),
     strategy: str = Form("auto"),
+    granularity: str = Form("paragraph"),
     notifyUrl: str | None = Form(None),
     conn=Depends(get_conn),
 ):
     if strategy not in VALID_STRATEGIES:
         raise HTTPException(400, f"strategy must be one of {VALID_STRATEGIES}")
+    if granularity not in VALID_GRANULARITIES:
+        raise HTTPException(400, f"granularity must be one of {VALID_GRANULARITIES}")
     epub_path = _save_upload(await file.read())
-    record, unchanged = _run_pipeline(conn, epub_path, strategy, notifyUrl)
+    record, unchanged = _run_pipeline(conn, epub_path, strategy, notifyUrl, granularity)
     return JSONResponse(record, status_code=200 if unchanged else 201)
 
 
@@ -125,6 +131,7 @@ async def reprocess(
     book_id: str,
     file: UploadFile = File(...),
     strategy: str = Form("auto"),
+    granularity: str = Form("paragraph"),
     notifyUrl: str | None = Form(None),
     conn=Depends(get_conn),
 ):
@@ -132,8 +139,10 @@ async def reprocess(
         raise HTTPException(404, "publication not found")
     if strategy not in VALID_STRATEGIES:
         raise HTTPException(400, f"strategy must be one of {VALID_STRATEGIES}")
+    if granularity not in VALID_GRANULARITIES:
+        raise HTTPException(400, f"granularity must be one of {VALID_GRANULARITIES}")
     epub_path = _save_upload(await file.read())
-    record, unchanged = _run_pipeline(conn, epub_path, strategy, notifyUrl)
+    record, unchanged = _run_pipeline(conn, epub_path, strategy, notifyUrl, granularity)
     if record["bookId"] != book_id:
         raise HTTPException(409, f"uploaded file resolves to bookId {record['bookId']}, not {book_id}")
     return JSONResponse({**record, "unchanged": unchanged}, status_code=200)

@@ -78,6 +78,21 @@ def test_upload_without_identifier_is_rejected(client, epub_with_no_identifier):
     assert resp.status_code == 422
 
 
+def test_sentence_granularity_via_api(client, multi_sentence_epub):
+    resp = _upload(client, multi_sentence_epub, strategy="selector", granularity="sentence")
+    assert resp.status_code == 201
+    record = resp.json()
+    assert record["granularity"] == "sentence"
+
+    paragraphs = client.get(f"/v1/publications/{record['bookId']}/paragraphs").json()["paragraphs"]
+    assert len(paragraphs) == 6  # 3 sentences from the split paragraph + 3 untouched
+
+
+def test_invalid_granularity_is_rejected(client, sample_epub):
+    resp = _upload(client, sample_epub, granularity="word")
+    assert resp.status_code == 400
+
+
 def test_reupload_is_idempotent(client, sample_epub):
     first = _upload(client, sample_epub)
     assert first.status_code == 201

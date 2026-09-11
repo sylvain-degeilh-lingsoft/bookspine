@@ -16,11 +16,27 @@ from bookspine.extract.epub_reader import EpubFormatError, read_package, read_re
 from bookspine.extract.hashing import sha256_hex
 from bookspine.extract.paragraph_walker import LeafRef, build_document_tree, localname
 from bookspine.extract.repackage import build_canonical_epub
+from bookspine.extract.sentences import split_sentences
 from bookspine.extract.strategies import apply_strategy
 from bookspine.models import GuidedNavNode, Locator, Paragraph, PublicationRecord
 
 XML_PARSER = etree.XMLParser(recover=False, resolve_entities=False, no_network=True, huge_tree=True)
 CONTEXT_WORDS = 8
+GRANULARITIES = ("paragraph", "sentence")
+
+
+@dataclass
+class _Chunk:
+    """One addressable, resolvable unit — a paragraph, or (under sentence
+    granularity) one sentence within it. `fragment`/`css_selector` are always the
+    *paragraph's* addressing, since a sentence has no DOM node of its own to attach
+    an id or selector to; only `text` (and thus `text.highlight`) narrows further."""
+
+    href: str
+    fragment: str | None
+    css_selector: str | None
+    text: str
+    node: GuidedNavNode  # gets paragraph_id assigned once minted
 
 
 def _find_body(root: etree._Element) -> etree._Element | None:
@@ -67,7 +83,32 @@ def _head_words(text: str, n: int) -> str:
     return " ".join(words[:n])
 
 
-def extract(epub_path: str, strategy: str = "auto") -> ExtractionResult:
+def _build_chunks(leaves: list[LeafRef], addressing: list[dict], granularity: str) -> list[_Chunk]:
+    chunks: list[_Chunk] = []
+    for (elem, node, href), addr in zip(leaves, addressing):
+        if granularity == "sentence":
+            sentences = split_sentences(node.text or "") or [node.text or ""]
+            sentence_nodes = [GuidedNavNode(role="sentence", text=s) for s in sentences]
+            node.children = sentence_nodes  # the paragraph node becomes a container:
+            # its own `text` stays the full paragraph (a summary), but it's no
+            # longer directly addressable — only its sentence children are.
+            for sentence_text, sentence_node in zip(sentences, sentence_nodes):
+                chunks.append(
+                    _Chunk(href=href, fragment=addr["fragment"], css_selector=addr["css_selector"],
+                           text=sentence_text, node=sentence_node)
+                )
+        else:
+            chunks.append(
+                _Chunk(href=href, fragment=addr["fragment"], css_selector=addr["css_selector"],
+                       text=node.text or "", node=node)
+            )
+    return chunks
+
+
+def extract(epub_path: str, strategy: str = "auto", granularity: str = "paragraph") -> ExtractionResult:
+    if granularity not in GRANULARITIES:
+        raise ValueError(f"granularity must be one of {GRANULARITIES}")
+
     with open(epub_path, "rb") as f:
         source_bytes = f.read()
     source_hash = sha256_hex(source_bytes)
@@ -91,28 +132,31 @@ def extract(epub_path: str, strategy: str = "auto") -> ExtractionResult:
         parsed_docs[item.href] = root
 
     resolved_strategy, addressing = apply_strategy(leaves, strategy)
+    chunks = _build_chunks(leaves, addressing, granularity)
 
     paragraphs: list[Paragraph] = []
-    for i, ((elem, node, href), addr) in enumerate(zip(leaves, addressing)):
+    for i, chunk in enumerate(chunks):
         paragraph_id = f"p_{uuid.uuid4().hex[:16]}"
-        node.paragraph_id = paragraph_id
+        chunk.node.paragraph_id = paragraph_id
 
         text_before = None
         text_after = None
-        if i > 0 and leaves[i - 1][2] == href:
-            text_before = _tail_words(leaves[i - 1][1].text or "", CONTEXT_WORDS)
-        if i + 1 < len(leaves) and leaves[i + 1][2] == href:
-            text_after = _head_words(leaves[i + 1][1].text or "", CONTEXT_WORDS)
+        if i > 0 and chunks[i - 1].href == chunk.href:
+            text_before = _tail_words(chunks[i - 1].text, CONTEXT_WORDS)
+        if i + 1 < len(chunks) and chunks[i + 1].href == chunk.href:
+            text_after = _head_words(chunks[i + 1].text, CONTEXT_WORDS)
 
         locator = Locator(
-            href=href,
-            fragment=addr["fragment"],
-            css_selector=addr["css_selector"],
+            href=chunk.href,
+            fragment=chunk.fragment,
+            css_selector=chunk.css_selector,
             text_before=text_before,
-            text_highlight=node.text,
+            text_highlight=chunk.text,
             text_after=text_after,
         )
-        paragraphs.append(Paragraph(paragraph_id=paragraph_id, book_id=book_id, href=href, locator=locator, text=node.text or ""))
+        paragraphs.append(
+            Paragraph(paragraph_id=paragraph_id, book_id=book_id, href=chunk.href, locator=locator, text=chunk.text)
+        )
 
     if resolved_strategy == "id":
         modified_docs = {
@@ -135,6 +179,7 @@ def extract(epub_path: str, strategy: str = "auto") -> ExtractionResult:
         source_hash=source_hash,
         canonical_hash=canonical_hash,
         processed_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        granularity=granularity,
     )
     structure = guided_nav.build_publication_tree(per_document_nodes)
 

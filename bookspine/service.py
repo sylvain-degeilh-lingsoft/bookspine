@@ -21,19 +21,28 @@ def process_epub(
     epub_path: str,
     strategy: str = "auto",
     notify_url: str | None = None,
+    granularity: str = "paragraph",
 ) -> tuple[dict, bool]:
     """Runs extraction and persists the result. Returns (record_dict, unchanged).
 
-    `unchanged` is True when the submitted file's sourceHash matches what's already
-    stored for this bookId — an idempotent no-op, not a reprocess (§05/§07: sourceHash
-    exists precisely so a resubmission of unchanged content is cheap and detectable).
+    `unchanged` is True when the submitted file's sourceHash *and* the requested
+    strategy/granularity all match what's already stored for this bookId — an
+    idempotent no-op, not a reprocess (§05/§07: sourceHash exists precisely so a
+    resubmission of unchanged content is cheap and detectable). Matching sourceHash
+    alone isn't enough: re-submitting the same file asking for a different
+    strategy or granularity is real, new work, not a no-op.
     """
-    result = pipeline.extract(epub_path, strategy)
+    result = pipeline.extract(epub_path, strategy, granularity)
     book_id = result.record.book_id
 
     existing = db.get_publication(conn, book_id)
-    if existing is not None and existing["sourceHash"] == result.record.source_hash:
-        logger.info("publication %s: sourceHash unchanged, skipping reprocess", book_id)
+    if (
+        existing is not None
+        and existing["sourceHash"] == result.record.source_hash
+        and existing["strategy"] == result.record.strategy
+        and existing["granularity"] == result.record.granularity
+    ):
+        logger.info("publication %s: sourceHash/strategy/granularity unchanged, skipping reprocess", book_id)
         return existing, True
 
     pub_dir = files.publication_dir(storage_root, book_id)

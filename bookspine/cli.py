@@ -23,6 +23,14 @@ def main() -> None:
     default="auto",
     show_default=True,
 )
+@click.option(
+    "--granularity",
+    type=click.Choice(["paragraph", "sentence"]),
+    default="paragraph",
+    show_default=True,
+    help="Addressable/resolvable chunk size. 'sentence' splits each paragraph "
+    "further (heuristic boundary detection) while keeping its cssSelector/id.",
+)
 @click.option("-o", "--out", "out_dir", type=click.Path(file_okay=False), default="./out", show_default=True)
 @click.option(
     "--db",
@@ -31,12 +39,12 @@ def main() -> None:
     default=None,
     help="SQLite db to register the result in (default: <out>/bookspine.db).",
 )
-def extract(epub_path: str, strategy: str, out_dir: str, db_path: str | None) -> None:
+def extract(epub_path: str, strategy: str, granularity: str, out_dir: str, db_path: str | None) -> None:
     """Extract the paragraph tree + Locators from EPUB_PATH into OUT."""
     db_path = db_path or str(Path(out_dir) / "bookspine.db")
     conn = db_module.connect(db_path)
     try:
-        record, unchanged = service.process_epub(conn, out_dir, epub_path, strategy)
+        record, unchanged = service.process_epub(conn, out_dir, epub_path, strategy, granularity=granularity)
     except EpubFormatError as exc:
         raise click.ClickException(str(exc)) from exc
     finally:

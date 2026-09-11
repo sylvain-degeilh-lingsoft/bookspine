@@ -35,6 +35,24 @@ def test_reupload_with_same_source_hash_is_a_noop(tmp_path, sample_epub):
     assert len([e for e in events if e["bookId"] == record1["bookId"]]) == 1
 
 
+def test_reupload_with_different_granularity_is_not_a_noop(tmp_path, sample_epub):
+    """Same bytes, but a different granularity requested — real, new work, not the
+    idempotent-resubmission case sourceHash-only comparison used to (wrongly) treat
+    it as."""
+    conn = db.connect(tmp_path / "bookspine.db")
+    storage_root = str(tmp_path / "storage")
+
+    record1, unchanged1 = service.process_epub(conn, storage_root, sample_epub, "selector", granularity="paragraph")
+    assert unchanged1 is False
+    assert record1["granularity"] == "paragraph"
+
+    record2, unchanged2 = service.process_epub(conn, storage_root, sample_epub, "selector", granularity="sentence")
+    assert unchanged2 is False
+    assert record2["granularity"] == "sentence"
+    assert record2["bookId"] == record1["bookId"]
+    assert record2["sourceHash"] == record1["sourceHash"]  # same file — only granularity differs
+
+
 def test_reprocess_archives_previous_paragraph_text(tmp_path):
     from bookspine.extract import pipeline
     from tests.conftest import CONTAINER_XML, NAV_XHTML, PACKAGE_OPF

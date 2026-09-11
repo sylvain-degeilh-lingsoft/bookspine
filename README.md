@@ -41,19 +41,44 @@ bookspine serve --port 8080
 ## CLI
 
 ```
-bookspine extract <epub> [--strategy id|selector|auto] [-o ./out] [--db ./out/bookspine.db]
+bookspine extract <epub> [--strategy id|selector|auto] [--granularity paragraph|sentence] [-o ./out] [--db ./out/bookspine.db]
 bookspine resolve <paragraphId> --db ./out/bookspine.db
 bookspine serve [--host 0.0.0.0] [--port 8080]
 ```
 
-`extract` is idempotent: re-running it on a byte-identical file is a no-op (matched
-by `sourceHash`), not a reprocess — see §05/§07.
+`extract` is idempotent: re-running it with the same file *and* the same
+strategy/granularity is a no-op (matched by `sourceHash`), not a reprocess — see
+§05/§07. Resubmitting the same file asking for a different strategy or
+granularity is real work, not a no-op, and is processed accordingly.
+
+### Granularity: paragraph vs. sentence
+
+`--granularity paragraph` (default) is what's described above: one `paragraphId`
+per paragraph-level DOM leaf. `--granularity sentence` splits each paragraph's text
+further, minting one independent `paragraphId` per sentence.
+
+This needs no change to addressing at all: a sentence has no DOM node of its own,
+so it can't have its own id or `cssSelector` — every sentence Locator carries its
+*paragraph's* `fragment`/`cssSelector` unchanged, and only `text.highlight` narrows
+down to the sentence itself (with `text.before`/`text.after` now drawn from
+neighboring sentences instead of neighboring paragraphs). This is exactly what
+`EpubNavigator.go()`'s existing `text.highlight`-based resolution already supports.
+
+In `structure.json`, the paragraph node becomes a container rather than a leaf: it
+keeps its full text as a summary and carries no `paragraphId` of its own, with its
+sentences nested underneath as the addressable leaves.
+
+Sentence splitting here is a small heuristic (regex boundaries + a merge pass for
+common abbreviations and initials) — not a real NLP sentence tokenizer, so no
+model-download dependency and no extra weight in the Docker image, but it will
+occasionally get an edge case wrong (unusual abbreviations, ellipses, non-English
+punctuation conventions).
 
 ## API
 
 | Method | Path | |
 |---|---|---|
-| POST | `/v1/publications` | multipart: `file`, `strategy` (`id`\|`selector`\|`auto`), optional `notifyUrl` |
+| POST | `/v1/publications` | multipart: `file`, `strategy` (`id`\|`selector`\|`auto`), `granularity` (`paragraph`\|`sentence`), optional `notifyUrl` |
 | GET | `/v1/publications/{bookId}` | publication record |
 | GET | `/v1/publications/{bookId}/structure` | Guided-Navigation tree |
 | GET | `/v1/publications/{bookId}/paragraphs` | paragraph list (id, href, text, Locator) |

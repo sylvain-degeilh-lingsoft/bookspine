@@ -89,3 +89,36 @@ def test_text_highlight_always_populated(sample_epub):
     result = pipeline.extract(sample_epub, strategy="selector")
     for p in result.paragraphs:
         assert p.locator.text_highlight == p.text
+
+
+def test_sentence_granularity_splits_within_a_paragraph(multi_sentence_epub):
+    result = pipeline.extract(multi_sentence_epub, strategy="selector", granularity="sentence")
+    assert result.record.granularity == "sentence"
+
+    # 3 sentences from the split paragraph + 3 untouched single-sentence paragraphs
+    assert len(result.paragraphs) == 6
+    split_texts = {
+        "First sentence of the chapter.",
+        "Dr. Smith wrote the second.",
+        "A third follows.",
+    }
+    matching = [p for p in result.paragraphs if p.text in split_texts]
+    assert {p.text for p in matching} == split_texts
+
+    # every sentence from the same paragraph shares that paragraph's cssSelector —
+    # a sentence has no DOM node of its own to compute a selector from
+    assert len({p.locator.css_selector for p in matching}) == 1
+
+    # the paragraph itself becomes a non-addressable container: role stays
+    # "paragraph", full text kept as a summary, sentence leaves nested under it
+    chapter = result.structure.children[0]
+    split_paragraph_node = next(c for c in chapter.children if c.role == "paragraph" and c.children)
+    assert split_paragraph_node.paragraph_id is None
+    assert split_paragraph_node.text == "First sentence of the chapter. Dr. Smith wrote the second. A third follows."
+    assert {c.text for c in split_paragraph_node.children} == split_texts
+    assert all(c.role == "sentence" and c.paragraph_id for c in split_paragraph_node.children)
+
+
+def test_paragraph_granularity_is_the_default(sample_epub):
+    result = pipeline.extract(sample_epub, strategy="selector")
+    assert result.record.granularity == "paragraph"

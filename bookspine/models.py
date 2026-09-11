@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 Strategy = Literal["id", "selector", "auto"]
+Granularity = Literal["paragraph", "sentence"]
 Status = Literal["processing", "ready", "unsupported", "failed"]
 
 
@@ -90,6 +91,7 @@ class PublicationRecord:
     source_hash: str
     canonical_hash: str
     processed_at: str
+    granularity: Granularity = "paragraph"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -99,6 +101,7 @@ class PublicationRecord:
             "format": self.format,
             "status": self.status,
             "strategy": self.strategy,
+            "granularity": self.granularity,
             "canonicalHash": self.canonical_hash,
             "sourceHash": self.source_hash,
             "processedAt": self.processed_at,
