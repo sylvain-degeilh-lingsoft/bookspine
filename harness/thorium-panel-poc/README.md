@@ -18,7 +18,7 @@ harness's `prepare_book.py` + Vite dev server.
 
 New (all under `src/components/Actions/BookSpineSearch/`):
 - `StatefulBookSpineSearchTrigger.tsx` — toolbar/overflow-menu button, modeled on Thorium's own `StatefulTocTrigger`.
-- `StatefulBookSpineSearchContainer.tsx` — the panel itself: a search form + result list, each with a Jump button calling `useEpubNavigator().go()`. On a successful jump it also calls `applyDecorations()` with a single `Highlight`-style decoration for that result's Locator, so the target sentence/paragraph is visibly highlighted in the rendered page — replacing any previous highlight from an earlier jump, so only the just-selected result is ever highlighted. Uses `StatefulSheetWrapper` + `useDocking`, identical machinery to the TOC panel, so it inherits modal (popover/fullscreen by breakpoint) and dock-left/dock-right behavior for free.
+- `StatefulBookSpineSearchContainer.tsx` — the panel itself: a book picker (`StatefulDropdown`, the same component Thorium's own settings menus use) fetching `GET /v1/publications` on mount and showing each book's *title*, not its `bookId`; a search form; and a result list, each with a Jump button calling `useEpubNavigator().go()`. Picking a book in the dropdown does a full page navigation to that book's own `.../books/{bookId}/manifest.json` (see below) — a page's `Publication` is bound to whatever manifest it was opened with, so nothing this panel does in place can swap what's actually being *rendered*, only a route change can. The picker's default selection is recovered from that same URL (`currentBookIdFromLocation()`), not from an env var or component state, precisely so the panel's idea of "the current book" can't drift from what's actually on screen — the bug that motivated this design was the search querying one book's index while a different one was being read. On a successful jump it also calls `applyDecorations()` with a single `Highlight`-style decoration for that result's Locator, so the target sentence/paragraph is visibly highlighted in the rendered page — replacing any previous highlight from an earlier jump, so only the just-selected result is ever highlighted. Uses `StatefulSheetWrapper` + `useDocking`, identical machinery to the TOC panel, so it inherits modal (popover/fullscreen by breakpoint) and dock-left/dock-right behavior for free.
 - `assets/styles/thorium-web.bookspineSearch.module.css` — styled with the app's own CSS custom properties (`--th-theme-*`, `--th-layout-*`) rather than ad-hoc colors, so it matches Thorium's light/dark themes.
 - `index.ts` — barrel export, matching the convention of every other action folder.
 
@@ -33,13 +33,19 @@ Modified (small, additive edits — full files kept here for diffing):
 
 ## What it depends on from BookSpine itself
 
-- `GET /v1/publications/{bookId}/search?q=&limit=` (added to `bookspine/api/main.py`).
+- `GET /v1/publications` (the book picker) and `GET /v1/publications/{bookId}/search?q=&limit=` (added to `bookspine/api/main.py`).
 - CORS enabled on the API (`allow_origins=["*"]`, GET only) so the browser-based reader can call it cross-origin.
-- The book must have been unpacked via `../prepare_book.py`, which (as of the version in this repo) writes both `manifest.json` with `metadata.conformsTo` set to the EPUB profile URI, and a real `positions.json` — both are load-bearing for Thorium Web specifically (its own profile detection and `EpubNavigator.go()` internals depend on them; the harness's own minimal page didn't need either, since it bypasses that machinery).
+- The book must have been unpacked via `../prepare_book.py`, which (as of the version in this repo) writes `manifest.json` (with `metadata.conformsTo` set to the EPUB profile URI) and a real `positions.json` to **two** places: the original single fixed `public/book/` path (unchanged, still what the plain harness itself reads), and a stable per-book `public/books/{bookId}/` path keyed by the same `bookId` `bookspine extract` mints. Both are load-bearing for Thorium Web specifically (its own profile detection and `EpubNavigator.go()` internals depend on them; the harness's own minimal page didn't need either, since it bypasses that machinery) — the per-book path additionally is what lets the search panel's book picker actually switch which book is being read, not just which one `/search` queries.
+
+## Trying a different book
+
+1. Index it with BookSpine so `/search` has data: `bookspine extract /path/to/book.epub --strategy selector --granularity sentence -o ./out` — note the printed `bookId`.
+2. Give it a stable per-book manifest URL: `python ../prepare_book.py /path/to/book.epub`. Unlike the single fixed `public/book/` path (which this also still writes, for the plain harness), this book now has its own permanent `public/books/{bookId}/manifest.json` that won't get overwritten by preparing a different book later — so do this once per book, not just for whichever one you're about to read.
+3. In Thorium Web, open the search panel and pick the new book by title from the dropdown (populated from `GET /v1/publications`, so a freshly-indexed book shows up on the panel's next mount/reload with no server restart) — this navigates the whole page to that book's manifest URL, so the reader actually switches too, not just the search target.
 
 ## Known simplifications
 
-- `bookId` is a hardcoded default in `StatefulBookSpineSearchContainer.tsx` (`NEXT_PUBLIC_BOOKSPINE_BOOK_ID`, falling back to the harness's own test book) — no UI to change books.
 - No i18n: labels are plain English strings, not routed through `useI18n()`/the locale JSON files like every other first-party action's labels are.
 - Search is BookSpine's own plain substring match (see `bookspine/storage/db.py`'s `search_paragraphs`) — no ranking or stemming.
 - Only the jumped-to result is ever highlighted (one `Highlight`-style decoration, replaced on each jump) — there's no "highlight all matches on this page" mode.
+- The dropdown lists every book `/v1/publications` knows about, whether or not `prepare_book.py` was ever run for it — picking one that hasn't gets a 404 on navigation (Thorium's own `ErrorDisplay`), since BookSpine has no notion of "this book also has a servable manifest somewhere."

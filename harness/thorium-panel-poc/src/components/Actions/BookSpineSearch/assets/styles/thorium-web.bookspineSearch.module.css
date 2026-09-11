@@ -7,6 +7,21 @@
   margin-block-end: var(--th-layout-spacing);
 }
 
+.bookIdDropdown {
+  width: 100%;
+}
+
+.bookIdDropdown button {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--th-layout-radius);
+  border: 2px solid var(--th-theme-subdue);
+  padding: calc(var(--th-icon-size, 24px) * (1/4)) calc(var(--th-layout-spacing) / 2);
+}
+
 .search {
   display: grid;
   grid-template-columns: 1fr auto;

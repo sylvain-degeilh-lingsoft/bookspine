@@ -17,6 +17,20 @@ accepts an integer position number, not an href/selector/text Locator).
    python harness/prepare_book.py /path/to/book.epub
    ```
 
+   This also writes a real Position List (`positions.json`) — roughly one
+   position per ~1024 characters of each resource's visible text, not just
+   one per file — and a real `toc` in `manifest.json`, parsed from the EPUB's
+   own EPUB3 nav document or EPUB2 NCX, whichever it has. Both matter beyond
+   this harness itself (which only needs enough positions for
+   `EpubNavigator.go()`'s href lookup): a real reading app's own internal
+   progression tracking runs continuously as it scrolls/paginates, and a
+   too-sparse position list can make it compute a position past the end of
+   the book at a resource boundary — surfacing as "Locator not found in
+   position list" with no explicit navigation action to blame. A missing
+   `toc` similarly isn't a hard failure — Thorium Web falls back to
+   numbering resources "{title} 1", "{title} 2", ... — but doesn't show real
+   chapter names.
+
 2. Install JS dependencies (first run only):
 
    ```bash

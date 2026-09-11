@@ -81,6 +81,7 @@ punctuation conventions).
 | Method | Path | |
 |---|---|---|
 | POST | `/v1/publications` | multipart: `file`, `strategy` (`id`\|`selector`\|`auto`), `granularity` (`paragraph`\|`sentence`), optional `notifyUrl` |
+| GET | `/v1/publications` | list all publication records |
 | GET | `/v1/publications/{bookId}` | publication record |
 | GET | `/v1/publications/{bookId}/structure` | Guided-Navigation tree |
 | GET | `/v1/publications/{bookId}/paragraphs` | paragraph list (id, href, text, Locator) |

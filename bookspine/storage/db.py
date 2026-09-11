@@ -104,10 +104,7 @@ def upsert_publication(conn: sqlite3.Connection, record: PublicationRecord) -> N
     conn.commit()
 
 
-def get_publication(conn: sqlite3.Connection, book_id: str) -> dict | None:
-    row = conn.execute("SELECT * FROM publications WHERE book_id = ?", (book_id,)).fetchone()
-    if row is None:
-        return None
+def _publication_row(row: sqlite3.Row) -> dict:
     return {
         "bookId": row["book_id"],
         "title": row["title"],
@@ -120,6 +117,18 @@ def get_publication(conn: sqlite3.Connection, book_id: str) -> dict | None:
         "canonicalHash": row["canonical_hash"],
         "processedAt": row["processed_at"],
     }
+
+
+def get_publication(conn: sqlite3.Connection, book_id: str) -> dict | None:
+    row = conn.execute("SELECT * FROM publications WHERE book_id = ?", (book_id,)).fetchone()
+    if row is None:
+        return None
+    return _publication_row(row)
+
+
+def list_publications(conn: sqlite3.Connection) -> list[dict]:
+    rows = conn.execute("SELECT * FROM publications ORDER BY processed_at DESC").fetchall()
+    return [_publication_row(r) for r in rows]
 
 
 def replace_paragraphs(conn: sqlite3.Connection, book_id: str, paragraphs: list[Paragraph]) -> None:

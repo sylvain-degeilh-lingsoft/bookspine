@@ -33,6 +33,10 @@ class EpubPackage:
     title: str
     language: str
     spine: list[SpineItem]
+    # EPUB2-style NCX table of contents, when present (<spine toc="idref">
+    # pointing at a manifest item) — EPUB3's own nav document, if any, is
+    # already reachable via the spine item with is_nav=True instead.
+    ncx_href: str | None = None
 
 
 class EpubFormatError(ValueError):
@@ -87,6 +91,10 @@ def read_package(zip_path: str) -> EpubPackage:
         title_el = opf.find(".//dc:title", NS)
         language_el = opf.find(".//dc:language", NS)
 
+        spine_el = opf.find(".//opf:spine", NS)
+        ncx_idref = spine_el.get("toc") if spine_el is not None else None
+        ncx_href = manifest[ncx_idref][0] if ncx_idref and ncx_idref in manifest else None
+
         return EpubPackage(
             zip_path=zip_path,
             opf_path=opf_path,
@@ -94,6 +102,7 @@ def read_package(zip_path: str) -> EpubPackage:
             title=(title_el.text or "").strip() if title_el is not None else "",
             language=(language_el.text or "").strip() if language_el is not None else "und",
             spine=spine,
+            ncx_href=ncx_href,
         )
 
 

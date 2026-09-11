@@ -93,6 +93,17 @@ def test_invalid_granularity_is_rejected(client, sample_epub):
     assert resp.status_code == 400
 
 
+def test_list_publications_returns_all_books(client, sample_epub):
+    assert client.get("/v1/publications").json()["publications"] == []
+
+    record = _upload(client, sample_epub).json()
+
+    publications = client.get("/v1/publications").json()["publications"]
+    assert len(publications) == 1
+    assert publications[0]["bookId"] == record["bookId"]
+    assert publications[0]["title"] == record["title"]
+
+
 def test_search_finds_matching_paragraphs(client, sample_epub):
     record = _upload(client, sample_epub).json()
     book_id = record["bookId"]

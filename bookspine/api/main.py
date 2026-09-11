@@ -2,6 +2,7 @@
 
 Endpoints:
   POST   /v1/publications                        submit an EPUB for extraction
+  GET    /v1/publications                        list all publications
   GET    /v1/publications/{bookId}                publication record
   GET    /v1/publications/{bookId}/structure      Guided-Navigation-shaped tree
   GET    /v1/publications/{bookId}/paragraphs     paragraph list (id, href, text, locator)
@@ -105,6 +106,11 @@ async def create_publication(
     epub_path = _save_upload(await file.read())
     record, unchanged = _run_pipeline(conn, epub_path, strategy, notifyUrl, granularity)
     return JSONResponse(record, status_code=200 if unchanged else 201)
+
+
+@app.get("/v1/publications")
+def list_publications(conn=Depends(get_conn)):
+    return {"publications": db_module.list_publications(conn)}
 
 
 @app.get("/v1/publications/{book_id}")
