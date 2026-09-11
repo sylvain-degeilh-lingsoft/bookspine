@@ -7,7 +7,8 @@ Endpoints:
   GET    /v1/publications/{bookId}/paragraphs     paragraph list (id, href, text, locator)
   GET    /v1/resolve/{paragraphId}                the resolver's hot path: id -> Locator
   POST   /v1/publications/{bookId}/reprocess      re-run extraction on a new upload
-  GET    /v1/events?since={cursor}                append-only event feed
+  GET    /v1/events?since={cursor}                append-only event feed, by cursor (recommended)
+  GET    /v1/events?sinceTime={iso8601}           same feed, by timestamp (coarser: 1s resolution)
 
 `paragraphId` is globally unique (minted independently per §05's invariant), so
 `/resolve` is flattened to a top-level path rather than nested under `bookId` — a
@@ -19,6 +20,7 @@ from __future__ import annotations
 import logging
 import os
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
@@ -137,8 +139,34 @@ async def reprocess(
     return JSONResponse({**record, "unchanged": unchanged}, status_code=200)
 
 
+def _normalize_since_time(value: str) -> str:
+    """Parses any ISO 8601 datetime (with or without a timezone; naive values are
+    assumed UTC) and reformats it to match the exact stored `created_at` format —
+    a plain string comparison in SQL only sorts correctly when both sides agree on
+    format and precision."""
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise HTTPException(400, f"invalid sinceTime {value!r}: expected ISO 8601") from exc
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 @app.get("/v1/events")
-def get_events(since: int = Query(0), conn=Depends(get_conn)):
-    events = db_module.list_events(conn, since)
+def get_events(
+    since: int = Query(0),
+    sinceTime: str | None = Query(None),
+    conn=Depends(get_conn),
+):
+    """`since` (event cursor) is the recommended, exact way to page through the
+    feed. `sinceTime` is a convenience alternative for humans/dashboards — it's
+    only as precise as `created_at`'s 1-second resolution, so two events in the
+    same second aren't distinguishable by timestamp. If both are given, `sinceTime`
+    wins."""
+    if sinceTime is not None:
+        events = db_module.list_events_since_time(conn, _normalize_since_time(sinceTime))
+    else:
+        events = db_module.list_events(conn, since)
     next_cursor = events[-1]["cursor"] if events else since
     return {"events": events, "nextCursor": next_cursor}

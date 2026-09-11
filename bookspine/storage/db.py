@@ -169,18 +169,30 @@ def append_event(conn: sqlite3.Connection, book_id: str, event_type: str, payloa
     return cur.lastrowid
 
 
+def _event_row(r: sqlite3.Row) -> dict:
+    return {
+        "cursor": r["cursor"],
+        "bookId": r["book_id"],
+        "type": r["type"],
+        "payload": json.loads(r["payload_json"]),
+        "createdAt": r["created_at"],
+    }
+
+
 def list_events(conn: sqlite3.Connection, since: int) -> list[dict]:
     rows = conn.execute(
         "SELECT cursor, book_id, type, payload_json, created_at FROM events WHERE cursor > ? ORDER BY cursor ASC",
         (since,),
     ).fetchall()
-    return [
-        {
-            "cursor": r["cursor"],
-            "bookId": r["book_id"],
-            "type": r["type"],
-            "payload": json.loads(r["payload_json"]),
-            "createdAt": r["created_at"],
-        }
-        for r in rows
-    ]
+    return [_event_row(r) for r in rows]
+
+
+def list_events_since_time(conn: sqlite3.Connection, since_time: str) -> list[dict]:
+    """`since_time` must already be normalized to the exact stored format
+    (`%Y-%m-%dT%H:%M:%SZ`, UTC) — `created_at` comparison is a plain string
+    comparison, which only sorts correctly when both sides share that format."""
+    rows = conn.execute(
+        "SELECT cursor, book_id, type, payload_json, created_at FROM events WHERE created_at > ? ORDER BY cursor ASC",
+        (since_time,),
+    ).fetchall()
+    return [_event_row(r) for r in rows]

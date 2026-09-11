@@ -50,6 +50,29 @@ def test_full_roundtrip(client, sample_epub):
     assert events["nextCursor"] >= 1
 
 
+def test_events_by_timestamp(client, sample_epub):
+    _upload(client, sample_epub)
+
+    # everything since the epoch: the one event is there, regardless of tz/format
+    resp = client.get("/v1/events", params={"sinceTime": "1970-01-01T00:00:00Z"})
+    assert resp.status_code == 200
+    assert len(resp.json()["events"]) == 1
+
+    created_at = resp.json()["events"][0]["createdAt"]  # "%Y-%m-%dT%H:%M:%SZ"
+
+    # a naive (no-tz) value is treated as UTC, same as the stored createdAt
+    naive = created_at.rstrip("Z")
+    assert client.get("/v1/events", params={"sinceTime": naive}).json()["events"] == []
+
+    # strictly after the event's own timestamp: nothing new
+    resp2 = client.get("/v1/events", params={"sinceTime": created_at})
+    assert resp2.json()["events"] == []
+    assert resp2.json()["nextCursor"] == 0  # falls back to `since` (default 0): no rows to take a cursor from
+
+    # malformed input is a 400, not a 500 or a silent empty result
+    assert client.get("/v1/events", params={"sinceTime": "not-a-date"}).status_code == 400
+
+
 def test_reupload_is_idempotent(client, sample_epub):
     first = _upload(client, sample_epub)
     assert first.status_code == 201

@@ -59,7 +59,8 @@ by `sourceHash`), not a reprocess — see §05/§07.
 | GET | `/v1/publications/{bookId}/paragraphs` | paragraph list (id, href, text, Locator) |
 | GET | `/v1/resolve/{paragraphId}` | **the resolver's hot path** — `paragraphId` → Locator |
 | POST | `/v1/publications/{bookId}/reprocess` | multipart, same fields as create |
-| GET | `/v1/events?since={cursor}` | append-only event feed |
+| GET | `/v1/events?since={cursor}` | append-only event feed, paged by cursor (recommended — exact) |
+| GET | `/v1/events?sinceTime={iso8601}` | same feed, paged by timestamp (convenience — 1s resolution, `createdAt`'s precision) |
 
 ```bash
 curl -F file=@book.epub -F strategy=id http://localhost:8080/v1/publications
