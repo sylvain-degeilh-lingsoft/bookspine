@@ -25,15 +25,20 @@ class Locator:
     text_after: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        # cssSelector is an HTML locator extension (readium/architecture's
+        # extensions/html.md) and belongs as a direct sibling of `fragments`
+        # inside `locations` on the wire. `@readium/shared`'s
+        # LocatorLocations.deserialize() only surfaces it via an in-memory
+        # `otherLocations` Map built from non-reserved keys — "otherLocations"
+        # itself is a reserved key with no meaning in the JSON, so nesting
+        # cssSelector under a literal "otherLocations" object (as this used
+        # to do) makes it silently unrecoverable by any real Readium reader.
         fragments = [self.fragment] if self.fragment else []
-        other_locations: dict[str, Any] = {}
-        if self.css_selector:
-            other_locations["cssSelector"] = self.css_selector
         locations: dict[str, Any] = {}
         if fragments:
             locations["fragments"] = fragments
-        if other_locations:
-            locations["otherLocations"] = other_locations
+        if self.css_selector:
+            locations["cssSelector"] = self.css_selector
         out: dict[str, Any] = {
             "href": self.href,
             "type": self.type,

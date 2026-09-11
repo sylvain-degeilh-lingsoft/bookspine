@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BookSpine Locator Harness</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; display: flex; height: 100vh; }
+
+    #sidebar {
+      width: 380px;
+      flex: none;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      gap: 10px;
+      border-right: 1px solid #8884;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+    #sidebar h1 { font-size: 15px; margin: 0 0 4px; }
+    #sidebar label { font-size: 12px; opacity: 0.75; display: block; margin-bottom: 2px; }
+    #sidebar input { width: 100%; box-sizing: border-box; padding: 5px 6px; font-size: 13px; }
+    #sidebar button { padding: 6px 10px; font-size: 13px; cursor: pointer; }
+    #status { font-size: 12px; white-space: pre-wrap; min-height: 1.2em; }
+    #status.error { color: #d33; }
+    #status.ok { color: #2a8; }
+
+    #paragraphs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+    #paragraphs li {
+      border: 1px solid #8884;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    #paragraphs li:hover { background: #8882; }
+    #paragraphs li.active { border-color: #4a9; background: #4a91; }
+    #paragraphs li .meta { opacity: 0.6; font-size: 10px; margin-bottom: 2px; }
+    #paragraphs li .text { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+    #nav-buttons { display: flex; gap: 6px; }
+    #nav-buttons button { flex: 1; }
+
+    #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+    #locator-bar {
+      flex: none;
+      padding: 8px 12px;
+      border-bottom: 1px solid #8884;
+      box-sizing: border-box;
+    }
+    #locator-bar label { font-size: 11px; opacity: 0.7; display: block; margin-bottom: 4px; }
+    #locator-json {
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      background: #8881;
+      border-radius: 6px;
+      padding: 8px;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+
+    #reader-container { flex: 1; position: relative; }
+  </style>
+</head>
+<body>
+  <div id="sidebar">
+    <h1>BookSpine Locator Harness</h1>
+
+    <div>
+      <label for="book-id">BookSpine bookId</label>
+      <input id="book-id" placeholder="b_9781449328030" />
+    </div>
+    <button id="load-btn">Load paragraphs from BookSpine</button>
+    <div id="status"></div>
+
+    <div id="nav-buttons">
+      <button id="prev-btn" disabled>&larr; Prev</button>
+      <button id="next-btn" disabled>Next &rarr;</button>
+    </div>
+
+    <ul id="paragraphs"></ul>
+  </div>
+
+  <div id="main">
+    <div id="locator-bar">
+      <label>Active Locator (sent to EpubNavigator.go)</label>
+      <div id="locator-json">(none yet)</div>
+    </div>
+    <div id="reader-container"></div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

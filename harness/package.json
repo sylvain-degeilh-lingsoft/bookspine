@@ -1,0 +1,17 @@
+{
+  "name": "bookspine-locator-harness",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Standalone Readium EpubNavigator test page for jumping to BookSpine Locators inside a real EPUB.",
+  "scripts": {
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@readium/navigator": "2.10.0",
+    "@readium/shared": "2.5.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}
