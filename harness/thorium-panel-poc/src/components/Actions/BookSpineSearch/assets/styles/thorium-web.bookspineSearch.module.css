@@ -7,6 +7,61 @@
   margin-block-end: var(--th-layout-spacing);
 }
 
+.search {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  width: 100%;
+}
+
+.searchInput {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  display: block;
+  border-radius: var(--th-layout-radius);
+  border: 2px solid var(--th-theme-subdue);
+  padding: calc(var(--th-icon-size, 24px) * (1/4)) calc(var(--th-layout-spacing) / 2);
+}
+
+.searchInput::-webkit-search-cancel-button,
+.searchInput::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+.searchInput[data-focus-visible] {
+  outline: 2px solid var(--th-theme-focus);
+}
+
+.searchIcon,
+.clearButton {
+  grid-column: 2;
+  grid-row: 1;
+  margin-inline-start: calc(var(--th-icon-size, 24px) * -1.25);
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon svg {
+  fill: var(--th-theme-subdue);
+  width: var(--th-icon-size, 24px);
+  height: var(--th-icon-size, 24px);
+}
+
+.clearButton svg {
+  fill: var(--th-theme-text);
+  width: var(--th-icon-size, 24px);
+  height: var(--th-icon-size, 24px);
+}
+
+.searchIcon[hidden],
+.clearButton[data-disabled] {
+  display: none;
+}
+
 .status {
   font-size: 0.85em;
   color: var(--th-theme-subdue);

@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useRef, useState } from "react";
 import { Locator } from "@readium/shared";
+import { DecorationStyleType } from "@readium/navigator";
 
 import { ThActionsKeys } from "@/preferences/models";
 import { StatefulActionContainerProps } from "../models/actions";
@@ -29,6 +30,7 @@ import { setImmersive, setUserNavigated } from "@/lib/readerReducer";
 
 const BOOKSPINE_API = process.env.NEXT_PUBLIC_BOOKSPINE_API || "http://localhost:8080";
 const DEFAULT_BOOK_ID = process.env.NEXT_PUBLIC_BOOKSPINE_BOOK_ID || "b_9781449328030";
+const HIGHLIGHT_GROUP = "bookspine-search-hit";
 
 interface SearchResult {
   paragraphId: string;
@@ -38,7 +40,7 @@ interface SearchResult {
 }
 
 export const StatefulBookSpineSearchContainer = ({ triggerRef }: StatefulActionContainerProps) => {
-  const { go } = useEpubNavigator();
+  const { go, applyDecorations } = useEpubNavigator();
 
   const profile = useAppSelector(state => state.reader.profile);
   const actionState = useAppSelector(state => profile ? state.actions.keys[profile][ThActionsKeys.bookspineSearch] : undefined);
@@ -110,10 +112,17 @@ export const StatefulBookSpineSearchContainer = ({ triggerRef }: StatefulActionC
       dispatch(setImmersive(true));
       dispatch(setUserNavigated(true));
       if (!isDocked) setOpen(false);
+
+      // Replaces the whole group each call, so exactly one hit is
+      // highlighted at a time — the one just jumped to.
+      applyDecorations(
+        ok ? [{ id: result.paragraphId, locator, style: { type: DecorationStyleType.Highlight } }] : [],
+        HIGHLIGHT_GROUP
+      );
     };
 
     go(locator, true, cb);
-  }, [go, sheetType, dispatch, setOpen]);
+  }, [go, applyDecorations, sheetType, dispatch, setOpen]);
 
   return (
     <StatefulSheetWrapper
@@ -140,6 +149,20 @@ export const StatefulBookSpineSearchContainer = ({ triggerRef }: StatefulActionC
           aria-label="Search this book"
           value={ query }
           onChange={ setQuery }
+          onClear={ () => setQuery("") }
+          className={ bookspineSearchStyles.search }
+          compounds={ {
+            input: {
+              className: bookspineSearchStyles.searchInput,
+              placeholder: "Search this book…"
+            },
+            searchIcon: { className: bookspineSearchStyles.searchIcon, hidden: !!query },
+            clearButton: {
+              className: bookspineSearchStyles.clearButton,
+              isDisabled: !query,
+              "aria-label": "Clear"
+            }
+          } }
         />
       </ThForm>
 

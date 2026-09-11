@@ -18,7 +18,7 @@ harness's `prepare_book.py` + Vite dev server.
 
 New (all under `src/components/Actions/BookSpineSearch/`):
 - `StatefulBookSpineSearchTrigger.tsx` — toolbar/overflow-menu button, modeled on Thorium's own `StatefulTocTrigger`.
-- `StatefulBookSpineSearchContainer.tsx` — the panel itself: a search form + result list, each with a Jump button calling `useEpubNavigator().go()`. Uses `StatefulSheetWrapper` + `useDocking`, identical machinery to the TOC panel, so it inherits modal (popover/fullscreen by breakpoint) and dock-left/dock-right behavior for free.
+- `StatefulBookSpineSearchContainer.tsx` — the panel itself: a search form + result list, each with a Jump button calling `useEpubNavigator().go()`. On a successful jump it also calls `applyDecorations()` with a single `Highlight`-style decoration for that result's Locator, so the target sentence/paragraph is visibly highlighted in the rendered page — replacing any previous highlight from an earlier jump, so only the just-selected result is ever highlighted. Uses `StatefulSheetWrapper` + `useDocking`, identical machinery to the TOC panel, so it inherits modal (popover/fullscreen by breakpoint) and dock-left/dock-right behavior for free.
 - `assets/styles/thorium-web.bookspineSearch.module.css` — styled with the app's own CSS custom properties (`--th-theme-*`, `--th-layout-*`) rather than ad-hoc colors, so it matches Thorium's light/dark themes.
 - `index.ts` — barrel export, matching the convention of every other action folder.
 
@@ -29,6 +29,7 @@ Modified (small, additive edits — full files kept here for diffing):
 - `src/preferences/models/actions.ts` — added `ThActionsKeys.bookspineSearch` and a `defaultBookspineSearchAction` config (copied from `defaultTocAction`'s docking/sheet shape).
 - `src/preferences/defaultPreferences.ts` — registered the new key in `actions.reflowOrder`/`fxlOrder` and `actions.keys`.
 - `src/app/read/manifest/[manifest]/page.tsx` — passes `plugins={{ epub: () => [createDefaultPlugin(), createBookSpineSearchPlugin()] }}` to `StatefulReaderWrapper` instead of relying on the implicit default-plugin fallback. This also replaces an earlier, cruder iteration of this POC (a fixed overlay `<BookSpineSearchPanel>` mounted outside Thorium's action system entirely — removed once this proper integration worked).
+- `src/core/Hooks/Epub/useEpubNavigator.ts` — the hook didn't expose `EpubNavigator.applyDecorations()` at all (only `go`/`goLink`/etc.); added a thin `applyDecorations` wrapper around the same module-scoped `navigatorInstance` singleton every other method already uses, and returned it from the hook.
 
 ## What it depends on from BookSpine itself
 
@@ -40,4 +41,5 @@ Modified (small, additive edits — full files kept here for diffing):
 
 - `bookId` is a hardcoded default in `StatefulBookSpineSearchContainer.tsx` (`NEXT_PUBLIC_BOOKSPINE_BOOK_ID`, falling back to the harness's own test book) — no UI to change books.
 - No i18n: labels are plain English strings, not routed through `useI18n()`/the locale JSON files like every other first-party action's labels are.
-- Search is BookSpine's own plain substring match (see `bookspine/storage/db.py`'s `search_paragraphs`) — no ranking, stemming, or highlighting beyond what BookSpine's `/search` endpoint returns.
+- Search is BookSpine's own plain substring match (see `bookspine/storage/db.py`'s `search_paragraphs`) — no ranking or stemming.
+- Only the jumped-to result is ever highlighted (one `Highlight`-style decoration, replaced on each jump) — there's no "highlight all matches on this page" mode.
