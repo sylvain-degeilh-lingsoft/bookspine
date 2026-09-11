@@ -35,12 +35,40 @@ def build_manifest(pkg) -> dict:
             "title": pkg.title or pkg.identifier,
             "identifier": pkg.identifier,
             "language": pkg.language,
+            # Without this, Thorium Web's detectProfile() falls back to its generic
+            # "webPub" profile/navigator instead of the EPUB one, since it has no
+            # other way to tell the two apart from a bare manifest.
+            "conformsTo": "https://readium.org/webpub-manifest/profiles/epub",
         },
         "links": [
-            {"rel": "self", "href": "manifest.json", "type": "application/webpub+json"}
+            {"rel": "self", "href": "manifest.json", "type": "application/webpub+json"},
+            {
+                "rel": "http://readium.org/positions",
+                "href": "positions.json",
+                "type": "application/vnd.readium.position-list+json",
+            },
         ],
         "readingOrder": reading_order,
     }
+
+
+def build_positions(reading_order: list[dict]) -> dict:
+    """A minimal but real Position List (readium/architecture's pagination.md
+    extension): one position per reading-order resource. @readium/navigator's
+    FramePoolManager resolves which resource to render on `go()` by looking up
+    `locations.position` in this list — with no position-list link at all,
+    that list is empty and EVERY cross-document jump throws "Locator not
+    found in position list", not just ones this panel triggers."""
+    total = len(reading_order)
+    positions = [
+        {
+            "href": item["href"],
+            "type": item["type"],
+            "locations": {"position": i + 1, "progression": 0, "totalProgression": i / total},
+        }
+        for i, item in enumerate(reading_order)
+    ]
+    return {"total": total, "positions": positions}
 
 
 def main() -> None:
@@ -64,6 +92,9 @@ def main() -> None:
 
     manifest = build_manifest(pkg)
     (BOOK_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    positions = build_positions(manifest["readingOrder"])
+    (BOOK_DIR / "positions.json").write_text(json.dumps(positions, indent=2), encoding="utf-8")
 
     print(f"Unpacked {epub_path.name} -> {BOOK_DIR}")
     print(f"  identifier: {pkg.identifier!r}")

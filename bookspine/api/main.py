@@ -5,6 +5,7 @@ Endpoints:
   GET    /v1/publications/{bookId}                publication record
   GET    /v1/publications/{bookId}/structure      Guided-Navigation-shaped tree
   GET    /v1/publications/{bookId}/paragraphs     paragraph list (id, href, text, locator)
+  GET    /v1/publications/{bookId}/search         keyword search over paragraph text
   GET    /v1/resolve/{paragraphId}                the resolver's hot path: id -> Locator
   POST   /v1/publications/{bookId}/reprocess      re-run extraction on a new upload
   GET    /v1/events?since={cursor}                append-only event feed, by cursor (recommended)
@@ -24,6 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from lxml.etree import XMLSyntaxError
 
@@ -44,6 +46,16 @@ VALID_STRATEGIES = ("id", "selector", "auto")
 VALID_GRANULARITIES = ("paragraph", "sentence")
 
 app = FastAPI(title="BookSpine", version="0.1.0")
+
+# Prototype only: this lets a browser-based reading app (e.g. a local Thorium Web
+# dev instance) call the read endpoints directly cross-origin, with no auth model
+# to protect. A real deployment would scope this to known reader origins.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 
 def get_conn():
@@ -116,6 +128,21 @@ def get_paragraphs(book_id: str, conn=Depends(get_conn)):
     if db_module.get_publication(conn, book_id) is None:
         raise HTTPException(404, "publication not found")
     return {"bookId": book_id, "paragraphs": db_module.list_paragraphs(conn, book_id)}
+
+
+@app.get("/v1/publications/{book_id}/search")
+def search_paragraphs(
+    book_id: str,
+    q: str = Query(..., min_length=1),
+    limit: int = Query(5, ge=1, le=50),
+    conn=Depends(get_conn),
+):
+    """Plain case-insensitive substring match over paragraph text — a prototype
+    keyword search, not ranked relevance or stemming."""
+    if db_module.get_publication(conn, book_id) is None:
+        raise HTTPException(404, "publication not found")
+    results = db_module.search_paragraphs(conn, book_id, q, limit)
+    return {"bookId": book_id, "query": q, "results": results}
 
 
 @app.get("/v1/resolve/{paragraph_id}")

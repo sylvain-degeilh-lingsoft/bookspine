@@ -93,6 +93,49 @@ def test_invalid_granularity_is_rejected(client, sample_epub):
     assert resp.status_code == 400
 
 
+def test_search_finds_matching_paragraphs(client, sample_epub):
+    record = _upload(client, sample_epub).json()
+    book_id = record["bookId"]
+
+    resp = client.get(f"/v1/publications/{book_id}/search", params={"q": "chapter"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["query"] == "chapter"
+    assert len(body["results"]) == 1
+    assert body["results"][0]["text"] == "First paragraph of the chapter."
+    assert "locator" in body["results"][0]
+
+    # case-insensitive
+    assert len(client.get(f"/v1/publications/{book_id}/search", params={"q": "CHAPTER"}).json()["results"]) == 1
+
+
+def test_search_respects_limit(client, sample_epub):
+    record = _upload(client, sample_epub).json()
+    book_id = record["bookId"]
+
+    # all 4 sample paragraphs contain the word "paragraph"
+    resp = client.get(f"/v1/publications/{book_id}/search", params={"q": "paragraph", "limit": 2})
+    assert len(resp.json()["results"]) == 2
+
+
+def test_search_no_match_returns_empty_results(client, sample_epub):
+    record = _upload(client, sample_epub).json()
+    resp = client.get(f"/v1/publications/{record['bookId']}/search", params={"q": "xyzzy"})
+    assert resp.status_code == 200
+    assert resp.json()["results"] == []
+
+
+def test_search_unknown_book_is_404(client):
+    resp = client.get("/v1/publications/b_doesnotexist/search", params={"q": "chapter"})
+    assert resp.status_code == 404
+
+
+def test_search_missing_query_is_rejected(client, sample_epub):
+    record = _upload(client, sample_epub).json()
+    resp = client.get(f"/v1/publications/{record['bookId']}/search")
+    assert resp.status_code == 422
+
+
 def test_reupload_is_idempotent(client, sample_epub):
     first = _upload(client, sample_epub)
     assert first.status_code == 201

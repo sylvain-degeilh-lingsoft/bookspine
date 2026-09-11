@@ -84,6 +84,7 @@ punctuation conventions).
 | GET | `/v1/publications/{bookId}` | publication record |
 | GET | `/v1/publications/{bookId}/structure` | Guided-Navigation tree |
 | GET | `/v1/publications/{bookId}/paragraphs` | paragraph list (id, href, text, Locator) |
+| GET | `/v1/publications/{bookId}/search?q={keyword}&limit={n}` | keyword search over paragraph text (plain case-insensitive substring match, not ranked relevance — `limit` defaults to 5, max 50) |
 | GET | `/v1/resolve/{paragraphId}` | **the resolver's hot path** — `paragraphId` → Locator |
 | POST | `/v1/publications/{bookId}/reprocess` | multipart, same fields as create |
 | GET | `/v1/events?since={cursor}` | append-only event feed, paged by cursor (recommended — exact) |
@@ -92,6 +93,7 @@ punctuation conventions).
 ```bash
 curl -F file=@book.epub -F strategy=id http://localhost:8080/v1/publications
 curl http://localhost:8080/v1/publications/b_9781449328030/paragraphs
+curl "http://localhost:8080/v1/publications/b_9781449328030/search?q=accessibility&limit=5"
 curl http://localhost:8080/v1/resolve/p_3f9a1c2b7e0d4a11
 curl "http://localhost:8080/v1/events?since=0"
 ```

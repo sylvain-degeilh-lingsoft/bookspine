@@ -175,6 +175,31 @@ def list_paragraphs(conn: sqlite3.Connection, book_id: str) -> list[dict]:
     ]
 
 
+def search_paragraphs(conn: sqlite3.Connection, book_id: str, query: str, limit: int) -> list[dict]:
+    """Plain substring search over `text`, case-insensitive. Not FTS — a prototype
+    keyword match, not ranked relevance."""
+    rows = conn.execute(
+        "SELECT paragraph_id, book_id, href, text, locator_json FROM paragraphs "
+        "WHERE book_id = ? AND text LIKE ? ESCAPE '\\' ORDER BY rowid LIMIT ?",
+        (book_id, _like_pattern(query), limit),
+    ).fetchall()
+    return [
+        {
+            "paragraphId": r["paragraph_id"],
+            "bookId": r["book_id"],
+            "href": r["href"],
+            "text": r["text"],
+            "locator": json.loads(r["locator_json"]),
+        }
+        for r in rows
+    ]
+
+
+def _like_pattern(query: str) -> str:
+    escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
 def append_event(conn: sqlite3.Connection, book_id: str, event_type: str, payload: dict) -> int:
     cur = conn.execute(
         "INSERT INTO events (book_id, type, payload_json, created_at) VALUES (?, ?, ?, ?)",
