@@ -1,0 +1,10 @@
+services:
+  bookspine:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - bookspine-data:/data
+
+volumes:
+  bookspine-data:
