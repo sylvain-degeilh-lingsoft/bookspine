@@ -51,11 +51,29 @@ accepts an integer position number, not an href/selector/text Locator).
    `[handleLocator]` warning to the browser console with the offending
    Locator.
 
+## Keyword search
+
+This harness's own list only calls `/paragraphs` (the full list) — it has no
+search box. BookSpine also exposes:
+
+```
+GET /v1/publications/{bookId}/search?q={keyword}&limit={n}
+```
+
+a plain case-insensitive substring match over paragraph text (`limit`
+defaults to 5, max 50), returning the same `{paragraphId, href, text,
+locator}` shape as `/paragraphs`. See the top-level [README](../README.md#api)
+for the full endpoint docs. [thorium-panel-poc/](thorium-panel-poc/) wires
+this endpoint into a real search panel inside a local Thorium Web clone,
+with a jump-to-result action equivalent to what this harness does by hand.
+
 ## What this validates (and what it doesn't)
 
 This proves BookSpine's Locators are structurally correct and resolvable by
 a real `@readium/navigator` — most usefully, that `locations.cssSelector`
 lands where `getCssSelector()` actually looks for it, and that
 `text.highlight` narrows all the way down to the paragraph/sentence text.
-It does not exercise Thorium Web's own UI chrome (search, TOC, bookmarks) —
-just the navigation primitive underneath it.
+It does not exercise Thorium Web's own UI chrome (TOC, bookmarks, its
+built-in jump-to-position) — just the navigation primitive underneath it.
+`thorium-panel-poc/` goes a step further for search specifically, but the
+rest of Thorium Web's chrome is still untouched.
