@@ -1,10 +1,10 @@
-"""Id-injection vs. CSS-selector addressing (Blueprint §07).
+"""Id-injection vs. CSS-selector addressing.
 
 Id-injection is scoped to BookSpine's own paragraph tree / search-and-navigate use
 case, on a repackaged copy of the EPUB. CSS-selector (computed while ignoring any
 injected attribute — trivial here, since the selector strategy never injects one)
 is the portable form used for anything that must resolve against the original,
-unmodified file, such as a bookmark or highlight (§07's "Scope of the injected id").
+unmodified file, such as a bookmark or highlight.
 """
 
 from __future__ import annotations

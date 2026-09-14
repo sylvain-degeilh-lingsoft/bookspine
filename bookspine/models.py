@@ -1,5 +1,5 @@
-"""Data shapes mirrored from the Reading Assistant Blueprint (§05 publication record,
-Readium Locator model, and the Guided Navigation structure tree)."""
+"""Data shapes for the publication record, the Readium Locator model, and the
+Guided Navigation structure tree."""
 
 from __future__ import annotations
 

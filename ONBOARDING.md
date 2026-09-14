@@ -9,7 +9,7 @@ must never break" version.
 BookSpine turns an EPUB into a paragraph-level search index: a structure
 tree, one Readium `Locator` per paragraph (keyed by an opaque `paragraphId`),
 and a publication record. It's the **processing-service** role in a
-three-role architecture (the Reading Assistant Blueprint, §01–§04):
+three-role architecture:
 
 - **Content operator** — holds distribution rights, runs the reading app
   (Thorium Web) and the resolver.
@@ -25,9 +25,9 @@ BookSpine's `/v1/resolve/{paragraphId}` endpoint, called by the content
 operator's own plugin — never by the provider directly.
 
 BookSpine itself can run alongside the content operator, as shared
-third-party infrastructure, or inside the provider (Blueprint §04's three
-deployment models) — today it only exists as a single-container proof-of-concept,
-not deployed anywhere, shaped like the first of those.
+third-party infrastructure, or inside the provider — today it only exists as a
+single-container proof-of-concept, not deployed anywhere, shaped like the first
+of those.
 
 ## Repo map
 
@@ -71,7 +71,7 @@ live. See README.md's **API** section for a plain curl walkthrough instead.
   `hash(href + cssSelector)`. An addressing-derived id shifts when a
   sibling paragraph is added or removed elsewhere in the file, silently
   orphaning a provider's embedding even though that paragraph's own text
-  never changed (Blueprint §07). This is also why `/v1/resolve` is a flat,
+  never changed. This is also why `/v1/resolve` is a flat,
   top-level path rather than nested under `bookId` — `paragraphId` is
   globally unique.
 - **Id-injection and CSS-selector addressing serve different consumers.**
@@ -101,16 +101,12 @@ live. See README.md's **API** section for a plain curl walkthrough instead.
 
 ## Known simplifications
 
-This is a single-container proof-of-concept, not the deployment Blueprint §04
-describes. See README.md's **Known simplifications** section for the full
-list (no async job queue, SQLite only, no auth/multi-tenancy).
+This is a single-container proof-of-concept. See README.md's **Known simplifications**
+section for the full list (no async job queue, SQLite only, no auth/multi-tenancy).
 
 ## Where to go next
 
 - **README.md** — full CLI/API reference with curl examples.
-- **Reading Assistant Blueprint** — the architecture doc this proof-of-concept
-  implements: the three-role model, the three deployment models, the
-  id-injection-vs-selector tradeoff in full, and query-time sequencing.
 - **BookSpine API Reference** — a narrative walkthrough of every endpoint
   with request/response examples and the actual error codes.
 - **BookSpine Swagger** — the live, interactive spec (same content as

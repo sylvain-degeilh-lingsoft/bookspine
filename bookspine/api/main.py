@@ -1,4 +1,4 @@
-"""BookSpine API (§05 of the Reading Assistant Blueprint).
+"""BookSpine API — the processing-service role: EPUB in, structure/Locators out.
 
 Endpoints:
   POST   /v1/publications                        submit an EPUB for extraction
@@ -12,7 +12,7 @@ Endpoints:
   GET    /v1/events?since={cursor}                append-only event feed, by cursor (recommended)
   GET    /v1/events?sinceTime={iso8601}           same feed, by timestamp (coarser: 1s resolution)
 
-`paragraphId` is globally unique (minted independently per §05's invariant), so
+`paragraphId` is globally unique (minted independently of file structure), so
 `/resolve` is flattened to a top-level path rather than nested under `bookId` — a
 search hit only ever carries the opaque id, not the book it came from.
 """
@@ -52,7 +52,7 @@ app = FastAPI(
     version="0.1.0",
     description=(
         "Paragraph-level EPUB structure/Locator extraction — the processing-service "
-        "role from §05 of the Reading Assistant Blueprint. All read endpoints return "
+        "role in a content pipeline. All read endpoints return "
         "`application/json`; the two write endpoints take `multipart/form-data`. "
         "No auth in this proof-of-concept."
     ),
@@ -116,7 +116,7 @@ def healthz():
 async def create_publication(
     file: UploadFile = File(..., description="The EPUB to process."),
     strategy: str = Form(
-        "auto", description="`id` | `selector` | `auto` (Blueprint §07) — `auto` resolves to `selector`."
+        "auto", description="`id` | `selector` | `auto` — `auto` resolves to `selector`."
     ),
     granularity: str = Form("paragraph", description="`paragraph` | `sentence`."),
     notifyUrl: str | None = Form(
@@ -165,7 +165,7 @@ def get_structure(book_id: str = PathParam(..., description="From a prior create
     "/v1/publications/{book_id}/paragraphs",
     tags=["Structure & paragraphs"],
     summary="List paragraphs",
-    description="The full paragraph list for a book — the pull target for embedding into a RAG provider's index (Blueprint §02).",
+    description="The full paragraph list for a book — the pull target for embedding into a RAG provider's index.",
 )
 def get_paragraphs(book_id: str = PathParam(..., description="From a prior create/list response."), conn=Depends(get_conn)):
     if db_module.get_publication(conn, book_id) is None:
@@ -198,7 +198,7 @@ def search_paragraphs(
     summary="Resolve a paragraphId to a Locator",
     description=(
         "Flat, top-level path — not nested under `bookId` — because `paragraphId` "
-        "is minted globally unique (Blueprint §07): a search hit only ever carries "
+        "is minted globally unique: a search hit only ever carries "
         "the opaque id, not the book it came from."
     ),
 )

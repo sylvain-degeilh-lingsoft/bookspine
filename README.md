@@ -2,10 +2,9 @@
 
 [![View on GitHub](https://img.shields.io/badge/GitHub-sylvain--degeilh--lingsoft%2Fbookspine-181717?logo=github)](https://github.com/sylvain-degeilh-lingsoft/bookspine)
 
-A working proof-of-concept of **BookSpine**, the paragraph-level EPUB structure/Locator
-processor sketched in the Reading Assistant Blueprint (§05, with §07's
-id-injection-vs-CSS-selector rules and the data-persistence design applied as
-described there). It takes an EPUB, walks it down to paragraph level, and produces:
+A working proof-of-concept of **BookSpine**, a paragraph-level EPUB structure/Locator
+processor for a reading app's content pipeline. It takes an EPUB, walks it down to
+paragraph level, and produces:
 
 - a **Guided-Navigation-shaped structure tree** (`readium.org/guided-navigation`)
 - one **Readium Locator** per paragraph, keyed by an independently-minted, opaque
@@ -100,9 +99,8 @@ curl "http://localhost:8080/v1/events?since=0"
 ```
 
 `paragraphId` is globally unique and minted independently of `href`/fragment (never
-`hash(href + fragment)` — see the invariant in the Blueprint/ONBOARDING), so
-`/resolve` is a flat top-level path rather than nested under `bookId`: a search hit
-only ever carries the opaque id.
+`hash(href + fragment)`), so `/resolve` is a flat top-level path rather than nested
+under `bookId`: a search hit only ever carries the opaque id.
 
 ## Id-injection vs. CSS-selector (§07)
 
@@ -127,7 +125,7 @@ injected id — it needs the `selector` strategy's portable fields instead. This
 proof-of-concept's extraction pipeline doesn't implement bookmarks; it only demonstrates
 that the two addressing strategies coexist and are independently selectable.
 
-## Data persistence (mirrors the Blueprint's §05 subsection)
+## Data persistence
 
 ```
 {BOOKSPINE_DATA}/                 (same layout under whatever dir `-o` points the CLI at)
@@ -155,8 +153,8 @@ re-anchoring flow would diff against.
 
 ## Known simplifications
 
-This is a single-container proof-of-concept, not the deployment described in
-Blueprint §04. In particular, deliberately **not** implemented here:
+This is a single-container proof-of-concept. In particular, deliberately **not**
+implemented here:
 
 - No async job queue — `POST /v1/publications` processes synchronously; a real
   deployment would return `status: "processing"` immediately and use the event
@@ -171,9 +169,8 @@ Blueprint §04. In particular, deliberately **not** implemented here:
   up rather than adding a `role: "group"` node. This keeps the tree aligned with
   the book's real chapter/section nesting but is narrower than the full
   Guided Navigation role vocabulary.
-- PDF is out of scope (per the Blueprint/ONBOARDING's resolution: Thorium Web has
-  no PDF navigator today). `format` is still a stubbed field on the publication
-  record for forward compatibility.
+- PDF is out of scope: Thorium Web has no PDF navigator today. `format` is
+  still a stubbed field on the publication record for forward compatibility.
 
 ## Compatibility
 
