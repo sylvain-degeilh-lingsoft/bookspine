@@ -2,8 +2,8 @@ import io
 import zipfile
 
 from bookspine import service
-from bookspine.storage import db, files
-from tests.conftest import CH01_XHTML, build_epub_bytes
+from bookspine.storage import db
+from tests.conftest import CH01_XHTML
 
 
 def _reopen(tmp_path, name, container_xml, package_opf, nav_xhtml, ch01_xhtml):
@@ -80,13 +80,3 @@ def test_reprocess_archives_previous_paragraph_text(tmp_path):
     current_texts = {p["text"] for p in db.list_paragraphs(conn, book_id)}
     assert "First paragraph, revised." in current_texts
     assert "First paragraph of the chapter." not in current_texts
-
-
-def test_canonical_blob_is_content_addressed(tmp_path, sample_epub):
-    conn = db.connect(tmp_path / "bookspine.db")
-    storage_root = tmp_path / "storage"
-
-    record, _ = service.process_epub(conn, str(storage_root), sample_epub, "selector")
-    blob = files.blob_path(storage_root, record["canonicalHash"])
-    assert blob.exists()
-    assert blob.read_bytes() == build_epub_bytes()

@@ -26,8 +26,8 @@ operator's own plugin — never by the provider directly.
 
 BookSpine itself can run alongside the content operator, as shared
 third-party infrastructure, or inside the provider (Blueprint §04's three
-deployment models) — today it only exists as a single-container prototype
-shaped like the first of those.
+deployment models) — today it only exists as a single-container proof-of-concept,
+not deployed anywhere, shaped like the first of those.
 
 ## Repo map
 
@@ -41,7 +41,7 @@ shaped like the first of those.
 | `bookspine/extract/guided_nav.py` | Builds the Guided-Navigation structure tree |
 | `bookspine/models.py` | `Locator`, `Paragraph`, `PublicationRecord` |
 | `bookspine/storage/db.py` | SQLite schema + queries (publications, paragraphs, events) |
-| `bookspine/storage/files.py` | Content-addressed blob storage, `publications/{bookId}/` layout |
+| `bookspine/storage/files.py` | `publications/{bookId}/` file layout (record, structure, paragraphs) |
 | `bookspine/service.py` | Glues extraction to persistence; the idempotency/event logic |
 | `bookspine/api/main.py` | The HTTP API (FastAPI) — also generates the OpenAPI/Swagger spec |
 | `bookspine/cli.py` | `bookspine extract` / `resolve` / `serve` |
@@ -75,14 +75,14 @@ live. See README.md's **API** section for a plain curl walkthrough instead.
   top-level path rather than nested under `bookId` — `paragraphId` is
   globally unique.
 - **Id-injection and CSS-selector addressing serve different consumers.**
-  `--strategy id` (default via `auto`) backs BookSpine's own search index —
-  safe, because those Locators only ever need to resolve against
-  BookSpine's current canonical copy. A bookmark or highlight (not yet
-  implemented here) is the opposite: reader-owned, long-lived, and must
-  resolve against the *original, unmodified* file too — so it must be
-  built from the `selector` strategy's portable fields
-  (`cssSelector`, `text.highlight`/`before`/`after`, `progression`,
-  `href`/`type`) and must never carry the injected id.
+  `--strategy selector` (default via `auto`) never touches the file — its
+  Locators resolve against the reader's own, unmodified copy, so it's what a
+  bookmark or highlight (not yet implemented here) would need: reader-owned,
+  long-lived, built from `selector`'s portable fields (`cssSelector`,
+  `text.highlight`/`before`/`after`, `progression`, `href`/`type`), never
+  carrying an injected id. `--strategy id` is the opposite trade: it mutates
+  a copy of the file, which is fine only because those Locators never need to
+  resolve against anything but BookSpine's own current canonical copy.
 - **Always populate `text.highlight`.** `EpubNavigator.loadLocator()` tries
   it before the selector/id alone, so a publisher edit that shifts
   positional matching but leaves the wording intact still resolves. It's
@@ -101,15 +101,14 @@ live. See README.md's **API** section for a plain curl walkthrough instead.
 
 ## Known simplifications
 
-This is a single-container prototype, not the deployment Blueprint §04
+This is a single-container proof-of-concept, not the deployment Blueprint §04
 describes. See README.md's **Known simplifications** section for the full
-list (no async job queue, no `--retention=ephemeral`, SQLite only, no
-auth/multi-tenancy).
+list (no async job queue, SQLite only, no auth/multi-tenancy).
 
 ## Where to go next
 
 - **README.md** — full CLI/API reference with curl examples.
-- **Reading Assistant Blueprint** — the architecture doc this prototype
+- **Reading Assistant Blueprint** — the architecture doc this proof-of-concept
   implements: the three-role model, the three deployment models, the
   id-injection-vs-selector tradeoff in full, and query-time sequencing.
 - **BookSpine API Reference** — a narrative walkthrough of every endpoint

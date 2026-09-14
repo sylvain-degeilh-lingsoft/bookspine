@@ -1,4 +1,4 @@
-"""Ties the pure extraction pipeline to persistence (SQLite + content-addressed
+"""Ties the pure extraction pipeline to persistence (SQLite + per-publication
 files). Shared by the CLI and the API so both go through the same idempotency and
 event-emission logic."""
 
@@ -55,7 +55,6 @@ def process_epub(
             for p in result.paragraphs
         ],
     )
-    files.store_blob(storage_root, result.record.canonical_hash, result.canonical_epub)
 
     db.upsert_publication(conn, result.record)
     db.replace_paragraphs(conn, book_id, result.paragraphs)

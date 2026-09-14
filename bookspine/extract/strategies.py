@@ -70,9 +70,10 @@ def apply_selector_strategy(leaves: list[LeafRef]) -> list[dict]:
 
 
 def apply_strategy(leaves: list[LeafRef], strategy: str) -> tuple[str, list[dict]]:
-    """Returns (resolved_strategy, addressing). `auto` currently resolves to `id`
-    for reflowable EPUB — the only input type this prototype handles."""
-    resolved = "id" if strategy == "auto" else strategy
+    """Returns (resolved_strategy, addressing). `auto` resolves to `selector` —
+    it never touches the source file, and the resulting Locators still resolve
+    against the reader's own unmodified copy, not just BookSpine's canonical one."""
+    resolved = "selector" if strategy == "auto" else strategy
     if resolved == "id":
         return resolved, apply_id_strategy(leaves)
     if resolved == "selector":

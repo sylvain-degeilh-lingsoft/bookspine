@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "bookspine"
 version = "0.1.0"
-description = "Prototype paragraph-level EPUB structure/Locator extraction service (see Reading Assistant Blueprint §05/§07)"
+description = "Proof-of-concept paragraph-level EPUB structure/Locator extraction service (see Reading Assistant Blueprint §05/§07)"
 requires-python = ">=3.11"
 dependencies = [
     "lxml>=5.2",

@@ -40,9 +40,9 @@ logging.basicConfig(level=logging.INFO)
 
 DATA_ROOT = Path(os.environ.get("BOOKSPINE_DATA", "./data"))
 DB_PATH = DATA_ROOT / "bookspine.db"
-# Same flat layout `bookspine extract -o <dir>` uses (db + publications/ + blobs/
-# directly under one root) — so BOOKSPINE_DATA=<dir> and `-o <dir>` are
-# interchangeable: point the API at whatever directory the CLI already wrote to.
+# Same flat layout `bookspine extract -o <dir>` uses (db + publications/ directly
+# under one root) — so BOOKSPINE_DATA=<dir> and `-o <dir>` are interchangeable:
+# point the API at whatever directory the CLI already wrote to.
 STORAGE_ROOT = DATA_ROOT
 VALID_STRATEGIES = ("id", "selector", "auto")
 VALID_GRANULARITIES = ("paragraph", "sentence")
@@ -54,12 +54,12 @@ app = FastAPI(
         "Paragraph-level EPUB structure/Locator extraction — the processing-service "
         "role from §05 of the Reading Assistant Blueprint. All read endpoints return "
         "`application/json`; the two write endpoints take `multipart/form-data`. "
-        "No auth in this prototype."
+        "No auth in this proof-of-concept."
     ),
     servers=[{"url": "http://localhost:8080", "description": "bookspine serve (default port)"}],
 )
 
-# Prototype only: this lets a browser-based reading app (e.g. a local Thorium Web
+# Proof-of-concept only: this lets a browser-based reading app (e.g. a local Thorium Web
 # dev instance) call the read endpoints directly cross-origin, with no auth model
 # to protect. A real deployment would scope this to known reader origins.
 app.add_middleware(
@@ -116,7 +116,7 @@ def healthz():
 async def create_publication(
     file: UploadFile = File(..., description="The EPUB to process."),
     strategy: str = Form(
-        "auto", description="`id` | `selector` | `auto` (Blueprint §07) — `auto` currently resolves to `id`."
+        "auto", description="`id` | `selector` | `auto` (Blueprint §07) — `auto` resolves to `selector`."
     ),
     granularity: str = Form("paragraph", description="`paragraph` | `sentence`."),
     notifyUrl: str | None = Form(
@@ -184,7 +184,7 @@ def search_paragraphs(
     limit: int = Query(5, ge=1, le=50, description="Max results to return."),
     conn=Depends(get_conn),
 ):
-    """Plain case-insensitive substring match over paragraph text — a prototype
+    """Plain case-insensitive substring match over paragraph text — a basic
     keyword search, not ranked relevance or stemming."""
     if db_module.get_publication(conn, book_id) is None:
         raise HTTPException(404, "publication not found")

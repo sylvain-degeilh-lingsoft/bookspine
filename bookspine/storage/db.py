@@ -73,7 +73,7 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
 
 
 def _migrate(conn: sqlite3.Connection) -> None:
-    """Lightweight forward-only migration for a prototype with no migration
+    """Lightweight forward-only migration for a proof-of-concept with no migration
     framework: add columns introduced after a db file was first created. Existing
     rows predate the `granularity` option, so they were paragraph-level — the
     column default already says so."""
@@ -185,7 +185,7 @@ def list_paragraphs(conn: sqlite3.Connection, book_id: str) -> list[dict]:
 
 
 def search_paragraphs(conn: sqlite3.Connection, book_id: str, query: str, limit: int) -> list[dict]:
-    """Plain substring search over `text`, case-insensitive. Not FTS — a prototype
+    """Plain substring search over `text`, case-insensitive. Not FTS — a basic
     keyword match, not ranked relevance."""
     rows = conn.execute(
         "SELECT paragraph_id, book_id, href, text, locator_json FROM paragraphs "

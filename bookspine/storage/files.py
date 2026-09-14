@@ -1,12 +1,12 @@
-"""Content-addressed on-disk layout under a storage root:
+"""On-disk layout under a storage root:
 
   {root}/publications/{bookId}/record.json
   {root}/publications/{bookId}/structure.json
   {root}/publications/{bookId}/paragraphs.jsonl
-  {root}/blobs/{sha256-hex}.epub           <- canonical EPUB, deduped by canonicalHash
 
-Two identical processed outputs (same canonicalHash) share one blob on disk, for
-free, just by writing to the same path.
+The EPUB itself is not kept — Thorium Web serves it from the content operator's
+own storage. BookSpine only persists what it produced: structure, Locators, and
+the paragraphId resolver index.
 """
 
 from __future__ import annotations
@@ -19,20 +19,6 @@ def publication_dir(root: str | Path, book_id: str) -> Path:
     d = Path(root) / "publications" / book_id
     d.mkdir(parents=True, exist_ok=True)
     return d
-
-
-def blob_path(root: str | Path, canonical_hash: str) -> Path:
-    hexdigest = canonical_hash.split(":", 1)[-1]
-    d = Path(root) / "blobs"
-    d.mkdir(parents=True, exist_ok=True)
-    return d / f"{hexdigest}.epub"
-
-
-def store_blob(root: str | Path, canonical_hash: str, data: bytes) -> Path:
-    path = blob_path(root, canonical_hash)
-    if not path.exists():
-        path.write_bytes(data)
-    return path
 
 
 def write_json(path: str | Path, obj) -> None:

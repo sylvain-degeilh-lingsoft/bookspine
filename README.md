@@ -1,8 +1,8 @@
-# BookSpine (prototype)
+# BookSpine (proof-of-concept)
 
 [![View on GitHub](https://img.shields.io/badge/GitHub-sylvain--degeilh--lingsoft%2Fbookspine-181717?logo=github)](https://github.com/sylvain-degeilh-lingsoft/bookspine)
 
-A working prototype of **BookSpine**, the paragraph-level EPUB structure/Locator
+A working proof-of-concept of **BookSpine**, the paragraph-level EPUB structure/Locator
 processor sketched in the Reading Assistant Blueprint (§05, with §07's
 id-injection-vs-CSS-selector rules and the data-persistence design applied as
 described there). It takes an EPUB, walks it down to paragraph level, and produces:
@@ -15,9 +15,9 @@ described there). It takes an EPUB, walks it down to paragraph level, and produc
 Exposed as both a CLI and a small HTTP API, backed by SQLite, containerized on
 Ubuntu 26.04.
 
-This is a prototype for validating the mechanism end-to-end against a real EPUB —
-not a production implementation. See **Known simplifications** below for what's
-deliberately left out.
+This is a proof-of-concept for validating the mechanism end-to-end against a real
+EPUB — not deployed anywhere, and not a production implementation. See
+**Known simplifications** below for what's deliberately left out.
 
 ## Quickstart (Docker)
 
@@ -106,15 +106,15 @@ only ever carries the opaque id.
 
 ## Id-injection vs. CSS-selector (§07)
 
+- `--strategy selector` (the default, via `auto`) never touches the file. Each
+  Locator instead carries a `cssSelector` computed by walking up to the nearest
+  ancestor id (or `<body>`). `canonicalHash` **equals** `sourceHash` — nothing
+  was repackaged, and the Locator still resolves against the reader's own
+  unmodified copy.
 - `--strategy id` mutates a **copy** of the EPUB, injecting a stable `id` on every
   paragraph-level element that doesn't already have one, and repackages it. This is
   the copy BookSpine indexes and the copy the reader opens for search/navigation.
   `canonicalHash` differs from `sourceHash`.
-- `--strategy selector` never touches the file. Each Locator instead carries a
-  `cssSelector` computed by walking up to the nearest ancestor id (or `<body>`).
-  `canonicalHash` **equals** `sourceHash` — nothing was repackaged.
-- `--strategy auto` currently resolves to `id` (the only EPUB-handling path this
-  prototype has).
 
 Every Locator also carries `text.highlight` (the paragraph's own text) plus
 `text.before`/`text.after` (a few words of surrounding-paragraph context, when the
@@ -124,7 +124,7 @@ re-edits, per §07's rule to always populate it.
 **This id-injected copy is not a bookmark format.** A bookmark/highlight must
 resolve against the reader's own unmodified file, so it must never carry the
 injected id — it needs the `selector` strategy's portable fields instead. This
-prototype's extraction pipeline doesn't implement bookmarks; it only demonstrates
+proof-of-concept's extraction pipeline doesn't implement bookmarks; it only demonstrates
 that the two addressing strategies coexist and are independently selectable.
 
 ## Data persistence (mirrors the Blueprint's §05 subsection)
@@ -138,9 +138,13 @@ that the two addressing strategies coexist and are independently selectable.
     record.json
     structure.json
     paragraphs.jsonl
-  blobs/{sha256}.epub              canonical EPUB, content-addressed by canonicalHash —
-                                    identical output from two reprocesses shares one file
 ```
+
+The EPUB itself isn't kept here — Thorium Web opens it from wherever the content
+operator already serves it from. BookSpine only persists what it produces:
+structure, Locators, and the resolver index. `canonicalHash` still tells you
+whether a `strategy: id` run repackaged the file (it differs from `sourceHash`)
+without BookSpine needing to store a copy to know that.
 
 The CLI (`bookspine extract -o <dir>`) and the API (`BOOKSPINE_DATA=<dir> bookspine serve`) use this exact same layout, so pointing both at the same directory means the API immediately sees whatever the CLI already extracted, and vice versa — `bookspine extract` is really just a one-shot, no-server way to drive the same pipeline the API drives per-request.
 
@@ -151,15 +155,13 @@ re-anchoring flow would diff against.
 
 ## Known simplifications
 
-This is a single-container prototype, not the deployment described in Blueprint
-§04. In particular, deliberately **not** implemented here:
+This is a single-container proof-of-concept, not the deployment described in
+Blueprint §04. In particular, deliberately **not** implemented here:
 
 - No async job queue — `POST /v1/publications` processes synchronously; a real
   deployment would return `status: "processing"` immediately and use the event
   feed / `notifyUrl` webhook to signal completion. `notifyUrl` itself *is* wired up
   (best-effort POST, failures logged and never fail the request).
-- No `--retention=ephemeral` flag (Model 3's provider-run deployment) — every
-  submitted source file's canonical blob is kept.
 - No Postgres option, no LMDB — SQLite only, per the "single-binary deployment"
   half of §05's persistence recommendation.
 - No auth, no multi-tenant `bookId` namespacing (§13's Model 2 scenario).
